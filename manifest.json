@@ -1,0 +1,55 @@
+{
+  "id": "plugin-campaigner",
+  "displayName": "Campaigner",
+  "description": "Publisher which connects to Campaigner",
+  "apiVersion": "2",
+  "versionDescription": "Version 2",
+  "version": "1.0.0",
+  "iconFile": "icon.png",
+  "executable": "PluginCampaigner",
+  "kind": "publisher",
+  "os": "$GOOS",
+  "arch": "$GOARCH",
+  "accessGroups": [],
+  "canProduceMultipleSchemas": true,
+  "canAcceptQueryBasedSchemas": false,
+  "canUseOAuth": false,
+  "canConfigureWrite": false,
+  "canWrite": false,
+  "canConfigureReplication": false,
+  "canWriteReplication": false,
+  "querySchema": {
+    "ui": {
+      "ui:widget": "code",
+      "ui:options": {
+        "language": "sql"
+      }
+    },
+    "schema": {
+      "type": "string"
+    }
+  },
+  "configSchema": {
+    "ui": {
+      "ui:order": [
+        "ApiKey"
+      ],
+      "ApiKey": {
+        "ui:widget": "password"
+      }
+    },
+    "schema": {
+      "type": "object",
+      "properties": {
+        "ApiKey" : {
+          "type": "string",
+          "title": "API Key",
+          "description": "The Campaigner API Key."
+        }
+      },
+      "required": [
+        "ApiKey"
+      ]
+    }
+  }
+}
