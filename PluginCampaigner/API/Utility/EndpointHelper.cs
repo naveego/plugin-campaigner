@@ -19,6 +19,7 @@ namespace PluginCampaigner.API.Utility
         static EndpointHelper()
         {
             CampaignEndpointHelper.CampaignEndpoints.ToList().ForEach(x => Endpoints.Add(x.Key, x.Value));
+            SubscriberEndpointHelper.SubscriberEndpoints.ToList().ForEach(x => Endpoints.Add(x.Key, x.Value));
         }
 
         public static Dictionary<string, Endpoint> GetAllEndpoints()

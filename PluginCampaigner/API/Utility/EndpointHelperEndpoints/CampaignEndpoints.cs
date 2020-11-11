@@ -12,10 +12,6 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
     {
         private class CampaignEndpoint : Endpoint
         {
-            public override IAsyncEnumerable<Record> ReadRecordsAsync(IApiClient apiClient)
-            {
-                return base.ReadRecordsAsync(apiClient);
-            }
         }
         
         public static readonly Dictionary<string, Endpoint> CampaignEndpoints = new Dictionary<string, Endpoint>
