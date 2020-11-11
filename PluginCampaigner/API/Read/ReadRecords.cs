@@ -11,8 +11,9 @@ namespace PluginCampaigner.API.Read
     {
         public static async IAsyncEnumerable<Record> ReadRecordsAsync(IApiClient apiClient, Schema schema)
         {
-            var endpointMetaJson = JsonConvert.DeserializeObject<Endpoint>(schema.PublisherMetaJson);
-            var endpoint = EndpointHelper.GetEndpointForId(endpointMetaJson.Id);
+            var endpointMetaJson = JsonConvert.DeserializeObject<dynamic>(schema.PublisherMetaJson);
+            string endpointId = endpointMetaJson.Id;
+            var endpoint = EndpointHelper.GetEndpointForId(endpointId);
 
             var records = endpoint?.ReadRecordsAsync(apiClient);
 

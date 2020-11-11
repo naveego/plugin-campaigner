@@ -15,13 +15,14 @@ namespace PluginCampaigner.API.Discover
         {
             foreach (var schema in refreshSchemas)
             {
-                var endpointMetaJson = JsonConvert.DeserializeObject<Endpoint>(schema.PublisherMetaJson);
-                var endpoint = EndpointHelper.GetEndpointForId(endpointMetaJson.Id);
+                var endpointMetaJson = JsonConvert.DeserializeObject<dynamic>(schema.PublisherMetaJson);
+                string endpointId = endpointMetaJson.Id;
+                var endpoint = EndpointHelper.GetEndpointForId(endpointId);
 
                 var refreshSchema = await GetSchemaForEndpoint(apiClient, schema, endpoint);
 
                 // get sample and count
-                yield return await AddSampleAndCount(apiClient, refreshSchema, sampleSize);
+                yield return await AddSampleAndCount(apiClient, refreshSchema, sampleSize, endpoint);
             }
         }
     }

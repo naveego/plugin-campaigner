@@ -63,7 +63,7 @@ namespace PluginCampaigner.API.Utility
 
             do 
             {
-                var response = await apiClient.GetAsync($"{BasePath.TrimEnd('/')}/{AllPath.TrimStart('/')}?PageSize={pageNumber}");
+                var response = await apiClient.GetAsync($"{BasePath.TrimEnd('/')}/{AllPath.TrimStart('/')}?PageNumber={pageNumber}");
 
                 var recordsList =
                     JsonConvert.DeserializeObject<DataWrapper>(await response.Content.ReadAsStringAsync());
@@ -82,7 +82,7 @@ namespace PluginCampaigner.API.Utility
                             kv.Key.Equals(DetailPropertyId) && kv.Value != null)
                         {
                             var detailResponse =
-                                await apiClient.GetAsync($"{BasePath.TrimEnd('/')}/{DetailPath.TrimStart('/')}");
+                                await apiClient.GetAsync($"{BasePath.TrimEnd('/')}/{DetailPath.TrimStart('/')}/{kv.Value}");
 
                             var detailsRecord =
                                 JsonConvert.DeserializeObject<Dictionary<string, object>>(

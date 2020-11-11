@@ -32,17 +32,22 @@ namespace PluginCampaigner.API.Discover
                 schema = await GetSchemaForEndpoint(apiClient, schema, endpoint);
 
                 // get sample and count
-                yield return await AddSampleAndCount(apiClient, schema, sampleSize);
+                yield return await AddSampleAndCount(apiClient, schema, sampleSize, endpoint);
             }
         }
 
         private static async Task<Schema> AddSampleAndCount(IApiClient apiClient, Schema schema,
-            int sampleSize)
+            int sampleSize, Endpoint? endpoint)
         {
+            if (endpoint == null)
+            {
+                return schema;
+            }
+            
             // add sample and count
-            var records = Read.Read.ReadRecordsAsync(apiClient, schema).Take(sampleSize);
+            var records = endpoint.ReadRecordsAsync(apiClient).Take(100);
             schema.Sample.AddRange(await records.ToListAsync());
-            schema.Count = await GetCountOfRecords(apiClient, schema);
+            schema.Count = await GetCountOfRecords(apiClient, endpoint);
 
             return schema;
         }

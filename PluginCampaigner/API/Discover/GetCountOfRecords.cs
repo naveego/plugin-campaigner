@@ -9,11 +9,8 @@ namespace PluginCampaigner.API.Discover
 {
     public static partial class Discover
     {
-        public static Task<Count> GetCountOfRecords(IApiClient apiClient, Schema schema)
+        public static Task<Count> GetCountOfRecords(IApiClient apiClient, Endpoint? endpoint)
         {
-            var endpointMetaJson = JsonConvert.DeserializeObject<Endpoint>(schema.PublisherMetaJson);
-            var endpoint = EndpointHelper.GetEndpointForId(endpointMetaJson.Id);
-
             return endpoint != null
                 ? endpoint.GetCountOfRecords(apiClient)
                 : Task.FromResult(new Count {Kind = Count.Types.Kind.Unavailable});
