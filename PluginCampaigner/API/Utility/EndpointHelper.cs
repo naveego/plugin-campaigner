@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -41,6 +42,7 @@ namespace PluginCampaigner.API.Utility
         public string AllPath { get; set; } = "";
         public string? DetailPath { get; set; }
         public string? DetailPropertyId { get; set; }
+        public List<string> PropertyKeys { get; set; } = new List<string>();
 
         public List<EndpointActions> SupportedActions { get; set; } = new List<EndpointActions>();
 
@@ -57,14 +59,14 @@ namespace PluginCampaigner.API.Utility
             };
         }
 
-        public virtual async IAsyncEnumerable<Record> ReadRecordsAsync(IApiClient apiClient)
+        public virtual async IAsyncEnumerable<Record> ReadRecordsAsync(IApiClient apiClient, DateTime? lastReadTime = null)
         {
             long pageNumber = 1;
             long maxPageNumber;
 
             do 
             {
-                var response = await apiClient.GetAsync($"{BasePath.TrimEnd('/')}/{AllPath.TrimStart('/')}?PageNumber={pageNumber}");
+                var response = await apiClient.GetAsync($"{BasePath.TrimEnd('/')}/{AllPath.TrimStart('/')}?PageNumber={pageNumber}{(lastReadTime != null ? $"&Since={lastReadTime}" : "")}");
 
                 var recordsList =
                     JsonConvert.DeserializeObject<DataWrapper>(await response.Content.ReadAsStringAsync());

@@ -14,6 +14,8 @@
   "canProduceMultipleSchemas": true,
   "canAcceptQueryBasedSchemas": false,
   "canUseOAuth": false,
+  "canConfigure": true,
+  "canConfigureRealTime": true,
   "canConfigureWrite": false,
   "canWrite": false,
   "canConfigureReplication": false,

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Naveego.Sdk.Plugins;
@@ -12,8 +13,8 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
         private class SubscriberEndpoint : Endpoint
         {
             private string ColumnPath = "/Database";
-            
-            public override async IAsyncEnumerable<Record> ReadRecordsAsync(IApiClient apiClient)
+
+            public override async IAsyncEnumerable<Record> ReadRecordsAsync(IApiClient apiClient, DateTime? lastReadTime)
         {
             long pageNumber = 1;
             long maxPageNumber;
@@ -24,7 +25,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
 
             do 
             {
-                var response = await apiClient.GetAsync($"{BasePath.TrimEnd('/')}/{AllPath.TrimStart('/')}?PageNumber={pageNumber}&Fields={columnString}");
+                var response = await apiClient.GetAsync($"{BasePath.TrimEnd('/')}/{AllPath.TrimStart('/')}?PageNumber={pageNumber}{(lastReadTime != null ? $"&Since={lastReadTime}" : "")}");
 
                 var recordsList =
                     JsonConvert.DeserializeObject<DataWrapper>(await response.Content.ReadAsStringAsync());
@@ -82,6 +83,10 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                 SupportedActions = new List<EndpointActions>
                 {
                     EndpointActions.Get
+                },
+                PropertyKeys = new List<string>
+                {
+                    "EmailID"
                 }
             }},
             {"RemovedSubscribers", new SubscriberEndpoint
@@ -95,6 +100,10 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                 SupportedActions = new List<EndpointActions>
                 {
                     EndpointActions.Get
+                },
+                PropertyKeys = new List<string>
+                {
+                    "EmailID"
                 }
             }},
         };

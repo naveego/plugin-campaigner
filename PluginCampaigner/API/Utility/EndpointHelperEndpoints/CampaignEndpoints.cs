@@ -27,6 +27,10 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                 SupportedActions = new List<EndpointActions>
                 {
                     EndpointActions.Get
+                },
+                PropertyKeys = new List<string>
+                {
+                    "CampaignID"
                 }
             }},
         };

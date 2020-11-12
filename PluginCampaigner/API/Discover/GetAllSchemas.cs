@@ -45,7 +45,7 @@ namespace PluginCampaigner.API.Discover
             }
             
             // add sample and count
-            var records = endpoint.ReadRecordsAsync(apiClient).Take(100);
+            var records = Read.Read.ReadRecordsAsync(apiClient, schema).Take(sampleSize);
             schema.Sample.AddRange(await records.ToListAsync());
             schema.Count = await GetCountOfRecords(apiClient, endpoint);
 
@@ -83,7 +83,7 @@ namespace PluginCampaigner.API.Discover
                     Id = recordKey,
                     Name = recordKey,
                     Type = types[recordKey],
-                    IsKey = false,
+                    IsKey = endpoint.PropertyKeys.Contains(recordKey),
                     IsCreateCounter = false,
                     IsUpdateCounter = false,
                     TypeAtSource = "",

@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
+using PluginCampaigner.API.Read;
 using PluginCampaigner.API.Utility;
 using PluginCampaigner.Helper;
 using Xunit;
@@ -414,6 +416,80 @@ namespace PluginCampaignerTest.Plugin
 
             // assert
             Assert.Equal(1, records.Count);
+
+            // cleanup
+            await channel.ShutdownAsync();
+            await server.ShutdownAsync();
+        }
+        
+        [Fact]
+        public async Task ReadStreamRealTimeTest()
+        {
+            // setup
+            Server server = new Server
+            {
+                Services = {Publisher.BindService(new PluginCampaigner.Plugin.Plugin())},
+                Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
+            };
+            server.Start();
+
+            var port = server.Ports.First().BoundPort;
+
+            var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
+            var client = new Publisher.PublisherClient(channel);
+
+            var schema = GetTestSchema();
+
+            var connectRequest = GetConnectSettings();
+
+            var schemaRequest = new DiscoverSchemasRequest
+            {
+                Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
+                ToRefresh = {schema}
+            };
+
+            var request = new ReadRequest()
+            {
+                DataVersions = new DataVersions
+                {
+                    JobId = "test",
+                    JobDataVersion = 1
+                },
+                JobId = "test",
+                RealTimeStateJson = JsonConvert.SerializeObject(new RealTimeState()),
+                RealTimeSettingsJson = JsonConvert.SerializeObject(new RealTimeSettings()),
+            };
+
+            // act
+            var records = new List<Record>();
+            try
+            {
+                client.Connect(connectRequest);
+                var schemasResponse = client.DiscoverSchemas(schemaRequest);
+                request.Schema = schemasResponse.Schemas[0];
+
+                var cancellationToken = new CancellationTokenSource();
+                cancellationToken.CancelAfter(5000);
+                var response = client.ReadStream(request, null, null, cancellationToken.Token);
+                var responseStream = response.ResponseStream;
+
+
+                while (await responseStream.MoveNext())
+                {
+                    records.Add(responseStream.Current);
+                }
+            }
+            catch (Exception e)
+            {
+                Assert.Equal("Status(StatusCode=Cancelled, Detail=\"Cancelled\")", e.Message);
+            }
+
+
+            // assert
+            Assert.Equal(3, records.Count);
+
+            var record = JsonConvert.DeserializeObject<Dictionary<string, object>>(records[0].DataJson);
+            // Assert.Equal("~", record["tilde"]);
 
             // cleanup
             await channel.ShutdownAsync();

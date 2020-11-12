@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -28,9 +29,34 @@ namespace PluginCampaigner.Plugin
                 WriteConfigured = false
             };
         }
+        
+        /// <summary>
+        /// Configures the plugin
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public override Task<ConfigureResponse> Configure(ConfigureRequest request, ServerCallContext context)
+        {
+            Logger.Debug("Got configure request");
+            Logger.Debug(JsonConvert.SerializeObject(request, Formatting.Indented));
+            
+            // ensure all directories are created
+            Directory.CreateDirectory(request.TemporaryDirectory);
+            Directory.CreateDirectory(request.PermanentDirectory);
+            Directory.CreateDirectory(request.LogDirectory);
+            
+            // configure logger
+            Logger.SetLogLevel(request.LogLevel);
+            Logger.Init(request.LogDirectory);
+
+            _server.Config = request;
+
+            return Task.FromResult(new ConfigureResponse());
+        }
 
         /// <summary>
-        /// Establishes a connection with Mockaroo.
+        /// Establishes a connection with Campaigner.
         /// </summary>
         /// <param name="request"></param>
         /// <param name="context"></param>
@@ -128,7 +154,7 @@ namespace PluginCampaigner.Plugin
 
 
         /// <summary>
-        /// Discovers schemas located in the users Zoho CRM instance
+        /// Discovers schemas located in the users Campaigner instance
         /// </summary>
         /// <param name="request"></param>
         /// <param name="context"></param>
@@ -186,6 +212,52 @@ namespace PluginCampaigner.Plugin
         }
 
         /// <summary>
+        /// Configures the plugin for a real time read
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public override Task<ConfigureRealTimeResponse> ConfigureRealTime(ConfigureRealTimeRequest request, ServerCallContext context)
+        {
+            Logger.Info("Configuring real time...");
+            
+            var realTimeState = new RealTimeState();
+            
+            var schemaJson = Read.GetSchemaJson();
+            var uiJson = Read.GetUIJson();
+
+            // if first call 
+            if (string.IsNullOrWhiteSpace(request.Form.DataJson) || request.Form.DataJson == "{}")
+            {
+                return Task.FromResult(new ConfigureRealTimeResponse
+                {
+                    Form = new ConfigurationFormResponse
+                    {
+                        DataJson = request.Form.DataJson,
+                        DataErrorsJson = "",
+                        Errors = { },
+                        SchemaJson = schemaJson,
+                        UiJson = uiJson,
+                        StateJson = JsonConvert.SerializeObject(realTimeState),
+                    }
+                });
+            }
+            
+            return Task.FromResult(new ConfigureRealTimeResponse
+            {
+                Form = new ConfigurationFormResponse
+                {
+                    DataJson = request.Form.DataJson,
+                    DataErrorsJson = "",
+                    Errors = { },
+                    SchemaJson = schemaJson,
+                    UiJson = uiJson,
+                    StateJson = request.Form.StateJson,
+                }
+            });
+        }
+
+        /// <summary>
         /// Publishes a stream of data for a given schema
         /// </summary>
         /// <param name="request"></param>
@@ -201,25 +273,32 @@ namespace PluginCampaigner.Plugin
                 var limit = request.Limit;
                 var limitFlag = request.Limit != 0;
                 var jobId = request.JobId;
-                var recordsCount = 0;
+                long recordsCount = 0;
 
                 Logger.SetLogPrefix(jobId);
 
-                var records = Read.ReadRecordsAsync(_apiClient, schema);
-
-                await foreach (var record in records)
+                if (!string.IsNullOrWhiteSpace(request.RealTimeStateJson))
                 {
-                    // stop publishing if the limit flag is enabled and the limit has been reached or the server is disconnected
-                    if (limitFlag && recordsCount == limit || !_server.Connected)
-                    {
-                        break;
-                    }
-
-                    // publish record
-                    await responseStream.WriteAsync(record);
-                    recordsCount++;
+                    recordsCount = await Read.ReadRecordsRealTimeAsync(_apiClient, request, responseStream, context);
                 }
+                else
+                {
+                    var records = Read.ReadRecordsAsync(_apiClient, schema);
 
+                    await foreach (var record in records)
+                    {
+                        // stop publishing if the limit flag is enabled and the limit has been reached or the server is disconnected
+                        if (limitFlag && recordsCount == limit || !_server.Connected)
+                        {
+                            break;
+                        }
+
+                        // publish record
+                        await responseStream.WriteAsync(record);
+                        recordsCount++;
+                    }
+                }
+                
                 Logger.Info($"Published {recordsCount} records");
             }
             catch (Exception e)
