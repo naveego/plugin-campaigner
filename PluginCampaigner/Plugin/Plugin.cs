@@ -221,8 +221,6 @@ namespace PluginCampaigner.Plugin
         {
             Logger.Info("Configuring real time...");
             
-            var realTimeState = new RealTimeState();
-            
             var schemaJson = Read.GetSchemaJson();
             var uiJson = Read.GetUIJson();
 
@@ -238,7 +236,7 @@ namespace PluginCampaigner.Plugin
                         Errors = { },
                         SchemaJson = schemaJson,
                         UiJson = uiJson,
-                        StateJson = JsonConvert.SerializeObject(realTimeState),
+                        StateJson = request.Form.StateJson,
                     }
                 });
             }
@@ -276,8 +274,10 @@ namespace PluginCampaigner.Plugin
                 long recordsCount = 0;
 
                 Logger.SetLogPrefix(jobId);
+                
+                Logger.Info(JsonConvert.SerializeObject(request.RealTimeStateJson, Formatting.Indented));
 
-                if (!string.IsNullOrWhiteSpace(request.RealTimeStateJson))
+                if (!string.IsNullOrWhiteSpace(request.RealTimeSettingsJson))
                 {
                     recordsCount = await Read.ReadRecordsRealTimeAsync(_apiClient, request, responseStream, context);
                 }

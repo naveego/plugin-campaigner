@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using PluginCampaigner.API.Factory;
 using PluginCampaigner.API.Utility.EndpointHelperEndpoints;
 using PluginCampaigner.DataContracts;
+using PluginCampaigner.Helper;
 
 namespace PluginCampaigner.API.Utility
 {
@@ -59,15 +60,19 @@ namespace PluginCampaigner.API.Utility
             };
         }
 
-        public virtual async IAsyncEnumerable<Record> ReadRecordsAsync(IApiClient apiClient, DateTime? lastReadTime = null)
+        public virtual async IAsyncEnumerable<Record> ReadRecordsAsync(IApiClient apiClient, DateTime? lastReadTime = null, TaskCompletionSource<DateTime>? tcs = null)
         {
             long pageNumber = 1;
             long maxPageNumber;
+            DateTime tcsDateTime;
 
             do 
             {
-                var response = await apiClient.GetAsync($"{BasePath.TrimEnd('/')}/{AllPath.TrimStart('/')}?PageNumber={pageNumber}{(lastReadTime != null ? $"&Since={lastReadTime}" : "")}");
+                var response = await apiClient.GetAsync($"{BasePath.TrimEnd('/')}/{AllPath.TrimStart('/')}?PageNumber={pageNumber}{(lastReadTime.HasValue ? $"&Since={lastReadTime.Value.ToUniversalTime():O}" : "")}");
 
+                Logger.Debug($"Date Header value: {response.Headers.Date}");
+                tcsDateTime = response.Headers.Date?.UtcDateTime ?? DateTime.UtcNow;
+                
                 var recordsList =
                     JsonConvert.DeserializeObject<DataWrapper>(await response.Content.ReadAsStringAsync());
 
@@ -146,6 +151,12 @@ namespace PluginCampaigner.API.Utility
 
                 pageNumber++;
             } while(pageNumber <= maxPageNumber);
+
+            if (tcs != null)
+            {
+                Logger.Debug($"Setting tcs with value {tcsDateTime.ToUniversalTime():O}");
+                tcs.SetResult(tcsDateTime);
+            }
         }
 
         public virtual Task<string> WriteRecordAsync(IApiClient apiClient, Record record,

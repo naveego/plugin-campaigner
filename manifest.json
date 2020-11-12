@@ -15,7 +15,7 @@
   "canAcceptQueryBasedSchemas": false,
   "canUseOAuth": false,
   "canConfigure": true,
-  "canConfigureRealTime": true,
+  "canConfigureRealTime": false,
   "canConfigureWrite": false,
   "canWrite": false,
   "canConfigureReplication": false,

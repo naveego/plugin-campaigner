@@ -14,23 +14,35 @@ namespace PluginCampaigner.API.Read
             IServerStreamWriter<Record> responseStream,
             ServerCallContext context)
         {
+            Logger.Info("Beginning to read records real time...");
+            
             var schema = request.Schema;
             var jobVersion = request.DataVersions.JobDataVersion;
             var recordsCount = 0;
 
             try
             {
-                var realTimeState = JsonConvert.DeserializeObject<RealTimeState>(request.RealTimeStateJson);
+                Logger.Info("Real time read initializing...");
                 var realTimeSettings = JsonConvert.DeserializeObject<RealTimeSettings>(request.RealTimeSettingsJson);
+                var realTimeState = !string.IsNullOrWhiteSpace(request.RealTimeStateJson) ?
+                    JsonConvert.DeserializeObject<RealTimeState>(request.RealTimeStateJson) :
+                    new RealTimeState();
 
                 if (jobVersion > realTimeState.JobVersion)
                 {
                     realTimeState.LastReadTime = DateTime.MinValue;
                 }
+                
+                Logger.Info("Real time read initialized.");
 
                 while (!context.CancellationToken.IsCancellationRequested)
                 {
-                    var records = ReadRecordsAsync(apiClient, schema, realTimeState.LastReadTime);
+                    long currentRunRecordsCount = 0;
+                    Logger.Debug($"Getting all records since {realTimeState.LastReadTime.ToUniversalTime():O}");
+                    
+                    var tcs = new TaskCompletionSource<DateTime>();
+                    
+                    var records = ReadRecordsAsync(apiClient, schema, realTimeState.LastReadTime, tcs);
 
                     await foreach (var record in records)
                     {
@@ -38,9 +50,10 @@ namespace PluginCampaigner.API.Read
                         // publish record
                         await responseStream.WriteAsync(record);
                         recordsCount++;
+                        currentRunRecordsCount++;
                     }
 
-                    realTimeState.LastReadTime = DateTime.Now;
+                    realTimeState.LastReadTime = await tcs.Task;
                     realTimeState.JobVersion = jobVersion;
 
                     var realTimeStateCommit = new Record
@@ -49,6 +62,8 @@ namespace PluginCampaigner.API.Read
                         RealTimeStateJson = JsonConvert.SerializeObject(realTimeState)
                     };
                     await responseStream.WriteAsync(realTimeStateCommit);
+                    
+                    Logger.Debug($"Got {currentRunRecordsCount} records since {realTimeState.LastReadTime.ToUniversalTime():O}");
 
                     await Task.Delay(realTimeSettings.PollingInterval * 1000, context.CancellationToken);
                 }

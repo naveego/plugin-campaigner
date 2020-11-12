@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
 using PluginCampaigner.API.Factory;
@@ -10,13 +11,13 @@ namespace PluginCampaigner.API.Read
 {
     public static partial class Read
     {
-        public static async IAsyncEnumerable<Record> ReadRecordsAsync(IApiClient apiClient, Schema schema, DateTime? lastReadTime = null)
+        public static async IAsyncEnumerable<Record> ReadRecordsAsync(IApiClient apiClient, Schema schema, DateTime? lastReadTime = null, TaskCompletionSource<DateTime>? tcs = null)
         {
             var endpointMetaJson = JsonConvert.DeserializeObject<dynamic>(schema.PublisherMetaJson);
             string endpointId = endpointMetaJson.Id;
             var endpoint = EndpointHelper.GetEndpointForId(endpointId);
 
-            var records = endpoint?.ReadRecordsAsync(apiClient, lastReadTime);
+            var records = endpoint?.ReadRecordsAsync(apiClient, lastReadTime, tcs);
 
             if (records != null)
             {
