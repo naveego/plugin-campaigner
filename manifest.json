@@ -17,7 +17,7 @@
   "canConfigure": true,
   "canConfigureRealTime": false,
   "canConfigureWrite": false,
-  "canWrite": false,
+  "canWrite": true,
   "canConfigureReplication": false,
   "canWriteReplication": false,
   "querySchema": {

@@ -59,12 +59,6 @@ namespace PluginCampaigner.API.Discover
                 return schema;
             }
             
-            if (endpoint.GetDataFlowDirection() == Schema.Types.DataFlowDirection.Write)
-            {
-                // TODO: ADD WRITE SUPPORT
-                return schema;
-            }
-
             var recordsListRaw = await endpoint.ReadRecordsAsync(apiClient).Take(100).ToListAsync();
             var recordsList = recordsListRaw
                 .Select(r => JsonConvert.DeserializeObject<Dictionary<string, object>>(r.DataJson))
@@ -86,7 +80,7 @@ namespace PluginCampaigner.API.Discover
                     IsKey = endpoint.PropertyKeys.Contains(recordKey),
                     IsCreateCounter = false,
                     IsUpdateCounter = false,
-                    TypeAtSource = "",
+                    TypeAtSource = await endpoint.IsCustomProperty(apiClient, recordKey) ? Constants.CustomProperty : "",
                     IsNullable = true
                 };
 

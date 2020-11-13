@@ -495,5 +495,95 @@ namespace PluginCampaignerTest.Plugin
             await channel.ShutdownAsync();
             await server.ShutdownAsync();
         }
+        
+        [Fact]
+        public async Task WriteTest()
+        {
+            // setup
+            Server server = new Server
+            {
+                Services = {Publisher.BindService(new PluginCampaigner.Plugin.Plugin())},
+                Ports = {new ServerPort("localhost", 0, ServerCredentials.Insecure)}
+            };
+            server.Start();
+
+            var port = server.Ports.First().BoundPort;
+
+            var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
+            var client = new Publisher.PublisherClient(channel);
+
+            var schema = GetTestSchema("UpsertSubscribers");
+
+            var connectRequest = GetConnectSettings();
+
+            var schemaRequest = new DiscoverSchemasRequest
+            {
+                Mode = DiscoverSchemasRequest.Types.Mode.Refresh,
+                ToRefresh = {schema}
+            };
+
+            var records = new List<Record>()
+            {
+                {
+                    new Record
+                    {
+                        Action = Record.Types.Action.Upsert,
+                        CorrelationId = "test",
+                        RecordId = "record1",
+                        DataJson = "{\"EmailId\":201,\"EmailAddress\":\"test@test.com\",\"FirstName\":\"Test Last\"}",
+                    }
+                }
+            };
+
+            var recordAcks = new List<RecordAck>();
+
+            // act
+            client.Connect(connectRequest);
+
+            var schemasResponse = client.DiscoverSchemas(schemaRequest);
+
+            var prepareWriteRequest = new PrepareWriteRequest()
+            {
+                Schema = schemasResponse.Schemas[0],
+                CommitSlaSeconds = 1000,
+                DataVersions = new DataVersions
+                {
+                    JobId = "jobUnitTest",
+                    ShapeId = "shapeUnitTest",
+                    JobDataVersion = 1,
+                    ShapeDataVersion = 1
+                }
+            };
+            client.PrepareWrite(prepareWriteRequest);
+
+            using (var call = client.WriteStream())
+            {
+                var responseReaderTask = Task.Run(async () =>
+                {
+                    while (await call.ResponseStream.MoveNext())
+                    {
+                        var ack = call.ResponseStream.Current;
+                        recordAcks.Add(ack);
+                    }
+                });
+
+                foreach (Record record in records)
+                {
+                    await call.RequestStream.WriteAsync(record);
+                }
+
+                await call.RequestStream.CompleteAsync();
+                await responseReaderTask;
+            }
+
+            // assert
+            Assert.Single(recordAcks);
+            Assert.Equal("", recordAcks[0].Error);
+            Assert.Equal("test", recordAcks[0].CorrelationId);
+
+            // cleanup
+            await channel.ShutdownAsync();
+            await server.ShutdownAsync();
+        }
     }
 }

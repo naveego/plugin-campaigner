@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
+using Grpc.Core;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
 using PluginCampaigner.API.Factory;
@@ -15,6 +18,15 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
         private class SubscriberEndpoint : Endpoint
         {
             private string ColumnPath = "/Database";
+            private List<string> ColumnPropertyIds = new List<string>();
+
+            private static string WritePathPropertyId = "EmailAddress";
+
+            private List<string> RequiredWritePropertyIds = new List<string>
+            {
+                WritePathPropertyId,
+            };
+
 
             public override async IAsyncEnumerable<Record> ReadRecordsAsync(IApiClient apiClient,
                 DateTime? lastReadTime = null, TaskCompletionSource<DateTime>? tcs = null)
@@ -23,11 +35,8 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                 long maxPageNumber;
                 DateTime tcsDateTime;
 
-                var columnResponse = await apiClient.GetAsync($"{ColumnPath.TrimEnd('/')}");
-                var columnList =
-                    JsonConvert.DeserializeObject<DatabaseColumnsWrapper>(
-                        await columnResponse.Content.ReadAsStringAsync());
-                var columnString = string.Join(",", columnList.DatabaseColumns.Select(c => c.ColumnName).ToList());
+                var columnPropertyIds = await GetColumnPropertyIds(apiClient);
+                var columnString = string.Join(",", columnPropertyIds);
 
                 do
                 {
@@ -84,6 +93,127 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     tcs.SetResult(tcsDateTime);
                 }
             }
+
+            public override async Task<string> WriteRecordAsync(IApiClient apiClient, Schema schema, Record record,
+                IServerStreamWriter<RecordAck> responseStream)
+            {
+                var recordMap = JsonConvert.DeserializeObject<Dictionary<string, object>>(record.DataJson);
+
+                foreach (var requiredPropertyId in RequiredWritePropertyIds)
+                {
+                    if (!recordMap.ContainsKey(requiredPropertyId))
+                    {
+                        var errorMessage = $"Record did not contain required property {requiredPropertyId}";
+                        var errorAck = new RecordAck
+                        {
+                            CorrelationId = record.CorrelationId,
+                            Error = errorMessage
+                        };
+                        await responseStream.WriteAsync(errorAck);
+
+                        return errorMessage;
+                    }
+
+                    if (recordMap.ContainsKey(requiredPropertyId) && recordMap[requiredPropertyId] == null)
+                    {
+                        var errorMessage = $"Required property {requiredPropertyId} was NULL";
+                        var errorAck = new RecordAck
+                        {
+                            CorrelationId = record.CorrelationId,
+                            Error = errorMessage
+                        };
+                        await responseStream.WriteAsync(errorAck);
+
+                        return errorMessage;
+                    }
+                }
+
+                var putObject = new Dictionary<string, object>();
+                var customFieldObject = new List<CustomField>();
+
+                foreach (var property in schema.Properties)
+                {
+                    if (property.TypeAtSource == Constants.CustomProperty)
+                    {
+                        var customField = new CustomField
+                        {
+                            FieldName = property.Id,
+                            Value = null
+                        };
+
+                        if (recordMap.ContainsKey(property.Id))
+                        {
+                            customField.Value = recordMap[property.Id];
+                        }
+
+                        customFieldObject.Add(customField);
+                    }
+                    else
+                    {
+                        object value = null;
+
+                        if (recordMap.ContainsKey(property.Id))
+                        {
+                            value = recordMap[property.Id];
+                        }
+
+                        putObject.Add(property.Id, value);
+                    }
+                }
+
+                putObject.Add("CustomFields", customFieldObject);
+
+                var json = new StringContent(
+                    JsonConvert.SerializeObject(putObject),
+                    Encoding.UTF8,
+                    "application/json"
+                );
+
+                var response =
+                    await apiClient.PutAsync($"{BasePath.TrimEnd('/')}/{recordMap[WritePathPropertyId]}", json);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorMessage = await response.Content.ReadAsStringAsync();
+                    var errorAck = new RecordAck
+                    {
+                        CorrelationId = record.CorrelationId,
+                        Error = errorMessage
+                    };
+                    await responseStream.WriteAsync(errorAck);
+
+                    return errorMessage;
+                }
+
+                var ack = new RecordAck
+                {
+                    CorrelationId = record.CorrelationId,
+                    Error = ""
+                };
+                await responseStream.WriteAsync(ack);
+
+                return "";
+            }
+
+            public override async Task<bool> IsCustomProperty(IApiClient apiClient, string propertyId)
+            {
+                if (ColumnPropertyIds.Count == 0)
+                {
+                    ColumnPropertyIds = await GetColumnPropertyIds(apiClient);
+                }
+
+                return ColumnPropertyIds.Contains(propertyId);
+            }
+
+            private async Task<List<string>> GetColumnPropertyIds(IApiClient apiClient)
+            {
+                var columnResponse = await apiClient.GetAsync($"{ColumnPath.TrimEnd('/')}");
+                var columnList =
+                    JsonConvert.DeserializeObject<DatabaseColumnsWrapper>(
+                        await columnResponse.Content.ReadAsStringAsync());
+
+                ColumnPropertyIds = columnList.DatabaseColumns.Select(c => c.ColumnName).ToList();
+                return ColumnPropertyIds;
+            }
         }
 
         public static readonly Dictionary<string, Endpoint> SubscriberEndpoints = new Dictionary<string, Endpoint>
@@ -119,6 +249,27 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     SupportedActions = new List<EndpointActions>
                     {
                         EndpointActions.Get
+                    },
+                    PropertyKeys = new List<string>
+                    {
+                        "EmailID"
+                    }
+                }
+            },
+            {
+                "UpsertSubscribers", new SubscriberEndpoint
+                {
+                    Id = "UpsertSubscribers",
+                    Name = "Upsert Subscribers",
+                    BasePath = "/Subscribers",
+                    AllPath = "/",
+                    DetailPath = null,
+                    DetailPropertyId = "EmailAddress",
+                    SupportedActions = new List<EndpointActions>
+                    {
+                        EndpointActions.Post,
+                        EndpointActions.Put,
+                        EndpointActions.Delete
                     },
                     PropertyKeys = new List<string>
                     {

@@ -33,6 +33,13 @@ namespace PluginCampaigner.API.Utility
         {
             return Endpoints.ContainsKey(id) ? Endpoints[id] : null;
         }
+
+        public static Endpoint? GetEndpointForSchema(Schema schema)
+        {
+            var endpointMetaJson = JsonConvert.DeserializeObject<dynamic>(schema.PublisherMetaJson);
+            string endpointId = endpointMetaJson.Id;
+            return GetEndpointForId(endpointId);
+        }
     }
 
     public abstract class Endpoint
@@ -159,10 +166,15 @@ namespace PluginCampaigner.API.Utility
             }
         }
 
-        public virtual Task<string> WriteRecordAsync(IApiClient apiClient, Record record,
+        public virtual Task<string> WriteRecordAsync(IApiClient apiClient, Schema schema, Record record,
             IServerStreamWriter<RecordAck> responseStream)
         {
             throw new System.NotImplementedException();
+        }
+        
+        public virtual Task<bool> IsCustomProperty(IApiClient apiClient, string propertyId)
+        {
+            return Task.FromResult(false);
         }
 
         public Schema.Types.DataFlowDirection GetDataFlowDirection()

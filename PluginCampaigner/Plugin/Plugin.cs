@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using PluginCampaigner.API.Discover;
 using PluginCampaigner.API.Factory;
 using PluginCampaigner.API.Read;
+using PluginCampaigner.API.Write;
 using PluginCampaigner.Helper;
 
 namespace PluginCampaigner.Plugin
@@ -254,7 +255,7 @@ namespace PluginCampaigner.Plugin
                 }
             });
         }
-
+        
         /// <summary>
         /// Publishes a stream of data for a given schema
         /// </summary>
@@ -275,7 +276,7 @@ namespace PluginCampaigner.Plugin
 
                 Logger.SetLogPrefix(jobId);
                 
-                Logger.Info(JsonConvert.SerializeObject(request.RealTimeStateJson, Formatting.Indented));
+                Logger.Debug(JsonConvert.SerializeObject(request.RealTimeStateJson, Formatting.Indented));
 
                 if (!string.IsNullOrWhiteSpace(request.RealTimeSettingsJson))
                 {
@@ -300,6 +301,83 @@ namespace PluginCampaigner.Plugin
                 }
                 
                 Logger.Info($"Published {recordsCount} records");
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, e.Message, context);
+            }
+        }
+        
+        /// <summary>
+        /// Prepares writeback settings to write to Campaigner
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public override async Task<PrepareWriteResponse> PrepareWrite(PrepareWriteRequest request,
+            ServerCallContext context)
+        {
+            Logger.SetLogPrefix(request.DataVersions.JobId);
+            Logger.Info("Preparing write...");
+            _server.WriteConfigured = false;
+
+            _server.WriteSettings = new WriteSettings
+            {
+                CommitSLA = request.CommitSlaSeconds,
+                Schema = request.Schema,
+                Replication = request.Replication,
+                DataVersions = request.DataVersions,
+            };
+
+            _server.WriteConfigured = true;
+
+            Logger.Debug(JsonConvert.SerializeObject(_server.WriteSettings, Formatting.Indented));
+            Logger.Info("Write prepared.");
+            return new PrepareWriteResponse();
+        }
+
+        /// <summary>
+        /// Writes records to Campaigner
+        /// </summary>
+        /// <param name="requestStream"></param>
+        /// <param name="responseStream"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        public override async Task WriteStream(IAsyncStreamReader<Record> requestStream,
+            IServerStreamWriter<RecordAck> responseStream, ServerCallContext context)
+        {
+            try
+            {
+                Logger.Info("Writing records to Campaigner...");
+
+                var schema = _server.WriteSettings.Schema;
+                var inCount = 0;
+
+                // get next record to publish while connected and configured
+                while (await requestStream.MoveNext(context.CancellationToken) && _server.Connected &&
+                       _server.WriteConfigured)
+                {
+                    var record = requestStream.Current;
+                    inCount++;
+
+                    Logger.Debug($"Got record: {record.DataJson}");
+
+                    if (_server.WriteSettings.IsReplication())
+                    {
+                        throw new System.NotSupportedException();
+                    }
+                    else
+                    {
+                        // send record to source system
+                        // add await for unit testing 
+                        // removed to allow multiple to run at the same time
+                        Task.Run(async () =>
+                                await Write.WriteRecordAsync(_apiClient, schema, record, responseStream),
+                            context.CancellationToken);
+                    }
+                }
+
+                Logger.Info($"Wrote {inCount} records to Campaigner.");
             }
             catch (Exception e)
             {

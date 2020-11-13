@@ -13,9 +13,7 @@ namespace PluginCampaigner.API.Read
     {
         public static async IAsyncEnumerable<Record> ReadRecordsAsync(IApiClient apiClient, Schema schema, DateTime? lastReadTime = null, TaskCompletionSource<DateTime>? tcs = null)
         {
-            var endpointMetaJson = JsonConvert.DeserializeObject<dynamic>(schema.PublisherMetaJson);
-            string endpointId = endpointMetaJson.Id;
-            var endpoint = EndpointHelper.GetEndpointForId(endpointId);
+            var endpoint = EndpointHelper.GetEndpointForSchema(schema);
 
             var records = endpoint?.ReadRecordsAsync(apiClient, lastReadTime, tcs);
 

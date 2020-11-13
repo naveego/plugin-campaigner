@@ -15,9 +15,7 @@ namespace PluginCampaigner.API.Discover
         {
             foreach (var schema in refreshSchemas)
             {
-                var endpointMetaJson = JsonConvert.DeserializeObject<dynamic>(schema.PublisherMetaJson);
-                string endpointId = endpointMetaJson.Id;
-                var endpoint = EndpointHelper.GetEndpointForId(endpointId);
+                var endpoint = EndpointHelper.GetEndpointForSchema(schema);
 
                 var refreshSchema = await GetSchemaForEndpoint(apiClient, schema, endpoint);
 
