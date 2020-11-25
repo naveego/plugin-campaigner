@@ -66,25 +66,28 @@ namespace PluginCampaigner.API.Discover
 
             var types = GetPropertyTypesFromRecords(recordsList);
             
-            var record = recordsList.First();
+            var record = recordsList.FirstOrDefault();
 
             var properties = new List<Property>();
 
-            foreach (var recordKey in record.Keys)
+            if (record != null)
             {
-                var property = new Property
+                foreach (var recordKey in record.Keys)
                 {
-                    Id = recordKey,
-                    Name = recordKey,
-                    Type = types[recordKey],
-                    IsKey = endpoint.PropertyKeys.Contains(recordKey),
-                    IsCreateCounter = false,
-                    IsUpdateCounter = false,
-                    TypeAtSource = await endpoint.IsCustomProperty(apiClient, recordKey) ? Constants.CustomProperty : "",
-                    IsNullable = true
-                };
+                    var property = new Property
+                    {
+                        Id = recordKey,
+                        Name = recordKey,
+                        Type = types[recordKey],
+                        IsKey = endpoint.PropertyKeys.Contains(recordKey),
+                        IsCreateCounter = false,
+                        IsUpdateCounter = false,
+                        TypeAtSource = await endpoint.IsCustomProperty(apiClient, recordKey) ? Constants.CustomProperty : "",
+                        IsNullable = true
+                    };
 
-                properties.Add(property);
+                    properties.Add(property);
+                }
             }
 
             schema.Properties.Clear();
