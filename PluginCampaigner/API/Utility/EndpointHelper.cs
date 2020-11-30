@@ -64,6 +64,8 @@ namespace PluginCampaigner.API.Utility
         public string? DetailPropertyId { get; set; }
         public List<string> PropertyKeys { get; set; } = new List<string>();
 
+        public virtual bool ShouldGetStaticSchema { get; set; } = false;
+
         public List<EndpointActions> SupportedActions { get; set; } = new List<EndpointActions>();
 
         public virtual async Task<Count> GetCountOfRecords(IApiClient apiClient)
@@ -187,6 +189,11 @@ namespace PluginCampaigner.API.Utility
 
         public virtual Task<string> WriteRecordAsync(IApiClient apiClient, Schema schema, Record record,
             IServerStreamWriter<RecordAck> responseStream)
+        {
+            throw new System.NotImplementedException();
+        }
+        
+        public virtual Task<Schema> GetStaticSchemaAsync(IApiClient apiClient, Schema schema)
         {
             throw new System.NotImplementedException();
         }

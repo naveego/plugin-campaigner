@@ -58,6 +58,11 @@ namespace PluginCampaigner.API.Discover
             {
                 return schema;
             }
+
+            if (endpoint.ShouldGetStaticSchema)
+            {
+                return await endpoint.GetStaticSchemaAsync(apiClient, schema);
+            }
             
             var recordsListRaw = await endpoint.ReadRecordsAsync(apiClient).Take(100).ToListAsync();
             var recordsList = recordsListRaw

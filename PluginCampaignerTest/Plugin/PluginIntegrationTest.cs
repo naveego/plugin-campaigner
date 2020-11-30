@@ -512,7 +512,7 @@ namespace PluginCampaignerTest.Plugin
             var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
             var client = new Publisher.PublisherClient(channel);
 
-            var schema = GetTestSchema("UpsertSubscribers");
+            var schema = GetTestSchema("UpsertCampaigns");
 
             var connectRequest = GetConnectSettings();
 
@@ -530,7 +530,7 @@ namespace PluginCampaignerTest.Plugin
                         Action = Record.Types.Action.Upsert,
                         CorrelationId = "test",
                         RecordId = "record1",
-                        DataJson = "{\"EmailId\":201,\"EmailAddress\":\"test@test.com\",\"FirstName\":\"Test Last\"}",
+                        DataJson = "{\"CampaignID\":201,\"Name\":\"Unit Test Name\",\"CreativeID\":0,\"Subject\":\"Unit Test Subject\",\"FromName\":\"Unit Test From Name\"}",
                     }
                 }
             };
