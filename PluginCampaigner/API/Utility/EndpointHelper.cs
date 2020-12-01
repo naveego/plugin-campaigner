@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Naveego.Sdk.Plugins;
@@ -65,6 +67,12 @@ namespace PluginCampaigner.API.Utility
         public List<string> PropertyKeys { get; set; } = new List<string>();
 
         public virtual bool ShouldGetStaticSchema { get; set; } = false;
+
+        protected virtual string WritePathPropertyId { get; set; } = "";
+
+        protected virtual List<string> RequiredWritePropertyIds { get; set; } = new List<string>
+        {
+        };
 
         public List<EndpointActions> SupportedActions { get; set; } = new List<EndpointActions>();
 
@@ -176,7 +184,7 @@ namespace PluginCampaigner.API.Utility
                         };
                     }
                 }
-                
+
                 pageNumber++;
             } while (pageNumber <= maxPageNumber);
 
@@ -187,12 +195,97 @@ namespace PluginCampaigner.API.Utility
             }
         }
 
-        public virtual Task<string> WriteRecordAsync(IApiClient apiClient, Schema schema, Record record,
+        public virtual async Task<string> WriteRecordAsync(IApiClient apiClient, Schema schema, Record record,
             IServerStreamWriter<RecordAck> responseStream)
         {
-            throw new System.NotImplementedException();
+            var recordMap = JsonConvert.DeserializeObject<Dictionary<string, object>>(record.DataJson);
+
+            foreach (var requiredPropertyId in RequiredWritePropertyIds)
+            {
+                if (!recordMap.ContainsKey(requiredPropertyId))
+                {
+                    var errorMessage = $"Record did not contain required property {requiredPropertyId}";
+                    var errorAck = new RecordAck
+                    {
+                        CorrelationId = record.CorrelationId,
+                        Error = errorMessage
+                    };
+                    await responseStream.WriteAsync(errorAck);
+
+                    return errorMessage;
+                }
+
+                if (recordMap.ContainsKey(requiredPropertyId) && recordMap[requiredPropertyId] == null)
+                {
+                    var errorMessage = $"Required property {requiredPropertyId} was NULL";
+                    var errorAck = new RecordAck
+                    {
+                        CorrelationId = record.CorrelationId,
+                        Error = errorMessage
+                    };
+                    await responseStream.WriteAsync(errorAck);
+
+                    return errorMessage;
+                }
+            }
+
+            var postObject = new Dictionary<string, object>();
+
+            foreach (var property in schema.Properties)
+            {
+                object value = null;
+
+                if (recordMap.ContainsKey(property.Id))
+                {
+                    value = recordMap[property.Id];
+                }
+
+                postObject.Add(property.Id, value);
+            }
+
+            var json = new StringContent(
+                JsonConvert.SerializeObject(postObject),
+                Encoding.UTF8,
+                "application/json"
+            );
+
+            HttpResponseMessage response;
+
+            if (!recordMap.ContainsKey(WritePathPropertyId) || recordMap.ContainsKey(WritePathPropertyId) &&
+                recordMap[WritePathPropertyId] == null)
+            {
+                response =
+                    await apiClient.PostAsync($"{BasePath.TrimEnd('/')}", json);
+            }
+            else
+            {
+                response =
+                    await apiClient.PutAsync($"{BasePath.TrimEnd('/')}/{recordMap[WritePathPropertyId]}", json);
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorMessage = await response.Content.ReadAsStringAsync();
+                var errorAck = new RecordAck
+                {
+                    CorrelationId = record.CorrelationId,
+                    Error = errorMessage
+                };
+                await responseStream.WriteAsync(errorAck);
+
+                return errorMessage;
+            }
+
+            var ack = new RecordAck
+            {
+                CorrelationId = record.CorrelationId,
+                Error = ""
+            };
+            await responseStream.WriteAsync(ack);
+
+            return "";
         }
-        
+
         public virtual Task<Schema> GetStaticSchemaAsync(IApiClient apiClient, Schema schema)
         {
             throw new System.NotImplementedException();

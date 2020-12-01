@@ -18,8 +18,8 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
         
         private class UpsertCampaignEndpoint : Endpoint
         {
-            private static string WritePathPropertyId = "CampaignID";
-            private List<string> RequiredWritePropertyIds = new List<string>
+            protected override string WritePathPropertyId { get; set; } = "CampaignID";
+            protected override List<string> RequiredWritePropertyIds { get; set; } = new List<string>
             {
                 "Name",
                 "CreativeID",
@@ -31,23 +31,28 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
 
             public override Task<Schema> GetStaticSchemaAsync(IApiClient apiClient, Schema schema)
             {
+                schema.Description =
+                    "Note: You can only schedule to one FilterID, ListID or SourceID. If all three are specified then the priority is: FilterID, ListID then SourceID.";
+                
                 var properties = new List<Property>
                 {
                     new Property
                     {
                         Id = "CampaignID",
                         Name = "CampaignID",
+                        Description = "The CampaignID, if included will attempt to update the target, if not included will attempt to create a new campaign.",
                         Type = PropertyType.Integer,
                         IsKey = false,
                         IsCreateCounter = false,
                         IsUpdateCounter = false,
                         TypeAtSource = "",
-                        IsNullable = false
+                        IsNullable = true
                     },
                     new Property
                     {
                         Id = "Name",
                         Name = "Name",
+                        Description = "Name of the campaign. (Max 100 chars) * REQUIRED",
                         Type = PropertyType.String,
                         IsKey = false,
                         IsCreateCounter = false,
@@ -59,6 +64,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     {
                         Id = "CreativeID",
                         Name = "CreativeID",
+                        Description = "Creative ID that should be sent with this campaign. * REQUIRED",
                         Type = PropertyType.Integer,
                         IsKey = false,
                         IsCreateCounter = false,
@@ -70,6 +76,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     {
                         Id = "Subject",
                         Name = "Subject",
+                        Description = "Subject of campaign (Max 255 chars) * REQUIRED",
                         Type = PropertyType.String,
                         IsKey = false,
                         IsCreateCounter = false,
@@ -81,6 +88,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     {
                         Id = "FromName",
                         Name = "FromName",
+                        Description = "From Name of campaign (Max 100 chars) * REQUIRED",
                         Type = PropertyType.String,
                         IsKey = false,
                         IsCreateCounter = false,
@@ -92,6 +100,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     {
                         Id = "FromEmail",
                         Name = "FromEmail",
+                        Description = "From Email of campaign (Max 150 chars)",
                         Type = PropertyType.String,
                         IsKey = false,
                         IsCreateCounter = false,
@@ -103,6 +112,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     {
                         Id = "ToName",
                         Name = "ToName",
+                        Description = "To Name of campaign (Max 100 chars)",
                         Type = PropertyType.String,
                         IsKey = false,
                         IsCreateCounter = false,
@@ -114,6 +124,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     {
                         Id = "PublicationID",
                         Name = "PublicationID",
+                        Description = "Target Publication for this campaign.",
                         Type = PropertyType.Integer,
                         IsKey = false,
                         IsCreateCounter = false,
@@ -125,6 +136,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     {
                         Id = "FilterID",
                         Name = "FilterID",
+                        Description = "Filter ID to target for this campaign.",
                         Type = PropertyType.Integer,
                         IsKey = false,
                         IsCreateCounter = false,
@@ -136,6 +148,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     {
                         Id = "ListID",
                         Name = "ListID",
+                        Description = "List ID to target for this campaign.",
                         Type = PropertyType.Integer,
                         IsKey = false,
                         IsCreateCounter = false,
@@ -147,6 +160,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     {
                         Id = "SourceID",
                         Name = "SourceID",
+                        Description = "Source ID to target for this campaign.",
                         Type = PropertyType.Integer,
                         IsKey = false,
                         IsCreateCounter = false,
@@ -158,6 +172,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     {
                         Id = "UseGoogleAnalytics",
                         Name = "UseGoogleAnalytics",
+                        Description = "A boolean value indicating whether google analytics parameters should be appended to tracked links.",
                         Type = PropertyType.Bool,
                         IsKey = false,
                         IsCreateCounter = false,
@@ -171,97 +186,6 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                 schema.Properties.AddRange(properties);
                 
                 return Task.FromResult(schema);
-            }
-
-            public override async Task<string> WriteRecordAsync(IApiClient apiClient, Schema schema, Record record,
-                IServerStreamWriter<RecordAck> responseStream)
-            {
-                var recordMap = JsonConvert.DeserializeObject<Dictionary<string, object>>(record.DataJson);
-
-                foreach (var requiredPropertyId in RequiredWritePropertyIds)
-                {
-                    if (!recordMap.ContainsKey(requiredPropertyId))
-                    {
-                        var errorMessage = $"Record did not contain required property {requiredPropertyId}";
-                        var errorAck = new RecordAck
-                        {
-                            CorrelationId = record.CorrelationId,
-                            Error = errorMessage
-                        };
-                        await responseStream.WriteAsync(errorAck);
-
-                        return errorMessage;
-                    }
-
-                    if (recordMap.ContainsKey(requiredPropertyId) && recordMap[requiredPropertyId] == null)
-                    {
-                        var errorMessage = $"Required property {requiredPropertyId} was NULL";
-                        var errorAck = new RecordAck
-                        {
-                            CorrelationId = record.CorrelationId,
-                            Error = errorMessage
-                        };
-                        await responseStream.WriteAsync(errorAck);
-
-                        return errorMessage;
-                    }
-                }
-
-                var postObject = new Dictionary<string, object>();
-
-                foreach (var property in schema.Properties)
-                {
-                    object value = null;
-
-                    if (recordMap.ContainsKey(property.Id))
-                    {
-                        value = recordMap[property.Id];
-                    }
-
-                    postObject.Add(property.Id, value);
-                }
-
-                var json = new StringContent(
-                    JsonConvert.SerializeObject(postObject),
-                    Encoding.UTF8,
-                    "application/json"
-                );
-
-                HttpResponseMessage response;
-
-                if (!recordMap.ContainsKey(WritePathPropertyId) || recordMap.ContainsKey(WritePathPropertyId) &&
-                    recordMap[WritePathPropertyId] == null)
-                {
-                    response =
-                        await apiClient.PostAsync($"{BasePath.TrimEnd('/')}", json);
-                }
-                else
-                {
-                    response =
-                        await apiClient.PutAsync($"{BasePath.TrimEnd('/')}/{recordMap[WritePathPropertyId]}", json);
-                }
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    var errorMessage = await response.Content.ReadAsStringAsync();
-                    var errorAck = new RecordAck
-                    {
-                        CorrelationId = record.CorrelationId,
-                        Error = errorMessage
-                    };
-                    await responseStream.WriteAsync(errorAck);
-
-                    return errorMessage;
-                }
-
-                var ack = new RecordAck
-                {
-                    CorrelationId = record.CorrelationId,
-                    Error = ""
-                };
-                await responseStream.WriteAsync(ack);
-
-                return "";
             }
         }
 

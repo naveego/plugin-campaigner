@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
+using Grpc.Core;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
 using PluginCampaigner.API.Factory;
@@ -75,6 +78,136 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
             }
         }
 
+        private class AddNewListsEndpoint : Endpoint
+        {
+            protected override string WritePathPropertyId { get; set; } = "";
+
+            protected override List<string> RequiredWritePropertyIds { get; set; } = new List<string>
+            {
+                "Name"
+            };
+
+            public override bool ShouldGetStaticSchema { get; set; } = true;
+
+            public override Task<Schema> GetStaticSchemaAsync(IApiClient apiClient, Schema schema)
+            {
+                schema.Description = @"";
+
+                var properties = new List<Property>
+                {
+                    new Property
+                    {
+                        Id = "Name",
+                        Name = "Name",
+                        Description = "Unique list name (less than 100 characters). * REQUIRED",
+                        Type = PropertyType.String,
+                        IsKey = false,
+                        IsCreateCounter = false,
+                        IsUpdateCounter = false,
+                        TypeAtSource = "",
+                        IsNullable = false
+                    },
+                    new Property
+                    {
+                        Id = "Description",
+                        Name = "Description",
+                        Description = "Description of the list (less than 200 characters).",
+                        Type = PropertyType.String,
+                        IsKey = false,
+                        IsCreateCounter = false,
+                        IsUpdateCounter = false,
+                        TypeAtSource = "",
+                        IsNullable = false
+                    },
+                };
+
+                schema.Properties.Clear();
+                schema.Properties.AddRange(properties);
+
+                return Task.FromResult(schema);
+            }
+
+            public override async Task<string> WriteRecordAsync(IApiClient apiClient, Schema schema, Record record,
+                IServerStreamWriter<RecordAck> responseStream)
+            {
+                var recordMap = JsonConvert.DeserializeObject<Dictionary<string, object>>(record.DataJson);
+
+                foreach (var requiredPropertyId in RequiredWritePropertyIds)
+                {
+                    if (!recordMap.ContainsKey(requiredPropertyId))
+                    {
+                        var errorMessage = $"Record did not contain required property {requiredPropertyId}";
+                        var errorAck = new RecordAck
+                        {
+                            CorrelationId = record.CorrelationId,
+                            Error = errorMessage
+                        };
+                        await responseStream.WriteAsync(errorAck);
+
+                        return errorMessage;
+                    }
+
+                    if (recordMap.ContainsKey(requiredPropertyId) && recordMap[requiredPropertyId] == null)
+                    {
+                        var errorMessage = $"Required property {requiredPropertyId} was NULL";
+                        var errorAck = new RecordAck
+                        {
+                            CorrelationId = record.CorrelationId,
+                            Error = errorMessage
+                        };
+                        await responseStream.WriteAsync(errorAck);
+
+                        return errorMessage;
+                    }
+                }
+
+                var postObject = new Dictionary<string, object>();
+
+                foreach (var property in schema.Properties)
+                {
+                    object value = null;
+
+                    if (recordMap.ContainsKey(property.Id))
+                    {
+                        value = recordMap[property.Id];
+                    }
+
+                    postObject.Add(property.Id, value);
+                }
+
+                var json = new StringContent(
+                    JsonConvert.SerializeObject(postObject),
+                    Encoding.UTF8,
+                    "application/json"
+                );
+
+                var response =
+                    await apiClient.PostAsync($"{BasePath.TrimEnd('/')}", json);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorMessage = await response.Content.ReadAsStringAsync();
+                    var errorAck = new RecordAck
+                    {
+                        CorrelationId = record.CorrelationId,
+                        Error = errorMessage
+                    };
+                    await responseStream.WriteAsync(errorAck);
+
+                    return errorMessage;
+                }
+
+                var ack = new RecordAck
+                {
+                    CorrelationId = record.CorrelationId,
+                    Error = ""
+                };
+                await responseStream.WriteAsync(ack);
+
+                return "";
+            }
+        }
+
         public static readonly Dictionary<string, Endpoint> ListsEndpoints = new Dictionary<string, Endpoint>
         {
             {
@@ -89,6 +222,25 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     SupportedActions = new List<EndpointActions>
                     {
                         EndpointActions.Get
+                    },
+                    PropertyKeys = new List<string>
+                    {
+                        "ListID"
+                    }
+                }
+            },
+            {
+                "AddLists", new ListsEndpoint
+                {
+                    Id = "AddLists",
+                    Name = "Add New Lists",
+                    BasePath = "/Lists",
+                    AllPath = "/",
+                    DetailPath = "/",
+                    DetailPropertyId = "ListID",
+                    SupportedActions = new List<EndpointActions>
+                    {
+                        EndpointActions.Post
                     },
                     PropertyKeys = new List<string>
                     {
