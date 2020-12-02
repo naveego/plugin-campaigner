@@ -565,7 +565,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                 }
             },
             {
-                "UpsertOrders", new OrdersEndpoint
+                "UpsertOrders", new UpsertOrdersEndpoint
                 {
                     Id = "UpsertOrders",
                     Name = "Upsert Orders",
@@ -604,7 +604,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                 }
             },
             {
-                "UpsertOrderItems", new OrdersEndpoint
+                "UpsertOrderItems", new UpsertOrderItemsEndpoint
                 {
                     Id = "UpsertOrderItems",
                     Name = "Upsert Order Items",
