@@ -98,6 +98,11 @@ namespace PluginCampaigner.API.Discover
             schema.Properties.Clear();
             schema.Properties.AddRange(properties);
 
+            if (schema.Properties.Count == 0)
+            {
+                schema.Description = Constants.EmptySchemaDescription;
+            }
+
             return schema;
         }
     }
