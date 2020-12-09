@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -80,18 +82,21 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
 
         private class AddNewListsEndpoint : Endpoint
         {
+            private static ConcurrentDictionary<string, long> NameToListIdDictionary = new ConcurrentDictionary<string, long>();
+            
             protected override string WritePathPropertyId { get; set; } = "";
 
             protected override List<string> RequiredWritePropertyIds { get; set; } = new List<string>
             {
-                "Name"
+                "Name",
+                "Email"
             };
 
             public override bool ShouldGetStaticSchema { get; set; } = true;
 
             public override Task<Schema> GetStaticSchemaAsync(IApiClient apiClient, Schema schema)
             {
-                schema.Description = @"";
+                schema.Description = @"Creates a new list if the provided name does not yet exist and adds emails to the named list.";
 
                 var properties = new List<Property>
                 {
@@ -111,6 +116,18 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     {
                         Id = "Description",
                         Name = "Description",
+                        Description = "Email to add to the list.",
+                        Type = PropertyType.String,
+                        IsKey = false,
+                        IsCreateCounter = false,
+                        IsUpdateCounter = false,
+                        TypeAtSource = "",
+                        IsNullable = false
+                    },
+                    new Property
+                    {
+                        Id = "Email",
+                        Name = "Email",
                         Description = "Description of the list (less than 200 characters).",
                         Type = PropertyType.String,
                         IsKey = false,
@@ -161,32 +178,29 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     }
                 }
 
-                var postObject = new Dictionary<string, object>();
-
-                foreach (var property in schema.Properties)
+                // only preload conversion dictionary if empty
+                if (NameToListIdDictionary.IsEmpty)
                 {
-                    object value = null;
+                    await PreLoadLookup(apiClient);
+                }
+                
+                // attempt to add email
+                var errorString = await AddEmailToList(apiClient, schema, recordMap);
 
-                    if (recordMap.ContainsKey(property.Id))
+                if (!string.IsNullOrWhiteSpace(errorString))
+                {
+                    errorString = await AddNewList(apiClient, schema, recordMap);
+
+                    // add email to new list if created
+                    if (string.IsNullOrWhiteSpace(errorString))
                     {
-                        value = recordMap[property.Id];
+                        errorString = await AddEmailToList(apiClient, schema, recordMap);
                     }
-
-                    postObject.Add(property.Id, value);
                 }
 
-                var json = new StringContent(
-                    JsonConvert.SerializeObject(postObject),
-                    Encoding.UTF8,
-                    "application/json"
-                );
-
-                var response =
-                    await apiClient.PostAsync($"{BasePath.TrimEnd('/')}", json);
-
-                if (!response.IsSuccessStatusCode)
+                if (!string.IsNullOrWhiteSpace(errorString))
                 {
-                    var errorMessage = await response.Content.ReadAsStringAsync();
+                    var errorMessage = errorString;
                     var errorAck = new RecordAck
                     {
                         CorrelationId = record.CorrelationId,
@@ -204,6 +218,101 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                 };
                 await responseStream.WriteAsync(ack);
 
+                return "";
+            }
+
+            private async Task PreLoadLookup(IApiClient apiClient)
+            {
+                var readResponse = await apiClient.GetAsync(
+                    $"{BasePath.TrimEnd('/')}/{AllPath.TrimStart('/')}");
+
+                var recordsList =
+                    JsonConvert.DeserializeObject<ListsResponse>(await readResponse.Content.ReadAsStringAsync());
+
+                foreach (var list in recordsList.Lists)
+                {
+                    NameToListIdDictionary.TryAdd(list["Name"].ToString() ?? "UNKNOWN_LIST", (long)list["ListID"]);
+                }
+            }
+
+            private async Task<string> AddEmailToList(IApiClient apiClient, Schema schema, Dictionary<string, object> recordMap)
+            {
+                if (NameToListIdDictionary.TryGetValue((string) recordMap["Name"], out var listId))
+                {
+                    var postObject = new Dictionary<string, object>();
+
+                    var emailList = new List<string>
+                    {
+                        (string)recordMap["Email"]
+                    };
+                    
+                    postObject.Add("EmailAddresses", emailList);
+
+                    var json = new StringContent(
+                        JsonConvert.SerializeObject(postObject),
+                        Encoding.UTF8,
+                        "application/json"
+                    );
+
+                    var response =
+                        await apiClient.PostAsync($"{BasePath.TrimEnd('/')}/{listId}/AddEmails", json);
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        return await response.Content.ReadAsStringAsync();
+                    }
+
+                    return "";
+                }
+
+                return "List does not exist in lookup.";
+            }
+
+            private async Task<string> AddNewList(IApiClient apiClient, Schema schema,
+                Dictionary<string, object> recordMap)
+            {
+                var postObject = new Dictionary<string, object>();
+
+                foreach (var property in schema.Properties)
+                {
+                    object value = null;
+
+                    if (property.Id == "Email")
+                    {
+                        continue;
+                    }
+
+                    if (recordMap.ContainsKey(property.Id))
+                    {
+                        value = recordMap[property.Id];
+                    }
+
+                    postObject.Add(property.Id, value);
+                }
+
+                var json = new StringContent(
+                    JsonConvert.SerializeObject(postObject),
+                    Encoding.UTF8,
+                    "application/json"
+                );
+
+                var response =
+                    await apiClient.PostAsync($"{BasePath.TrimEnd('/')}", json);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadAsStringAsync();
+                }
+                
+                var newList =
+                    JsonConvert.DeserializeObject<Dictionary<string, object>>(
+                        await response.Content.ReadAsStringAsync());
+
+                if(!NameToListIdDictionary.TryAdd((string)newList["Name"], (long)newList["ListID"]))
+                {
+                    return "Could not add new list to lookup.";
+                }
+                
                 return "";
             }
         }
@@ -230,7 +339,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                 }
             },
             {
-                "AddLists", new ListsEndpoint
+                "AddLists", new AddNewListsEndpoint
                 {
                     Id = "AddLists",
                     Name = "Add New Lists",
