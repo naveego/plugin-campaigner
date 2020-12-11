@@ -49,7 +49,12 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                         JsonConvert.DeserializeObject<DataWrapper>(await response.Content.ReadAsStringAsync());
 
                     maxPageNumber = recordsList.TotalPages;
-
+                    
+                    if (recordsList.Items == null)
+                    {
+                        yield break;
+                    }
+                    
                     foreach (var recordMap in recordsList.Items)
                     {
                         var normalizedRecordMap = new Dictionary<string, object?>();
@@ -211,7 +216,11 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     JsonConvert.DeserializeObject<DatabaseColumnsWrapper>(
                         await columnResponse.Content.ReadAsStringAsync());
 
-                ColumnPropertyIds = columnList.DatabaseColumns.Select(c => c.ColumnName).ToList();
+                ColumnPropertyIds = (
+                        columnList.DatabaseColumns ??
+                        new List<DatabaseColumn>()).Select(c => c.ColumnName
+                    )
+                    .ToList();
                 return ColumnPropertyIds;
             }
         }

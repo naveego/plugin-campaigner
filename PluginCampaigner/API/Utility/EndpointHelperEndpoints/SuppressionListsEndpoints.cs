@@ -11,7 +11,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
     {
         private class SuppressionListsResponse
         {
-            public List<Dictionary<string, object>> SuppressionLists { get; set; }
+            public List<Dictionary<string, object>>? SuppressionLists { get; set; }
         }
 
         private class SuppressionListsEndpoint : Endpoint
@@ -25,6 +25,10 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                 var recordsList =
                     JsonConvert.DeserializeObject<SuppressionListsResponse>(await response.Content.ReadAsStringAsync());
 
+                if (recordsList.SuppressionLists == null)
+                {
+                    yield break;
+                }
 
                 foreach (var recordMap in recordsList.SuppressionLists)
                 {

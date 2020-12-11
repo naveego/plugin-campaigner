@@ -4,7 +4,7 @@ namespace PluginCampaigner.DataContracts
 {
     public class DatabaseColumnsWrapper
     {
-        public List<DatabaseColumn> DatabaseColumns { get; set; }
+        public List<DatabaseColumn>? DatabaseColumns { get; set; }
     }
     
     public class DatabaseColumn

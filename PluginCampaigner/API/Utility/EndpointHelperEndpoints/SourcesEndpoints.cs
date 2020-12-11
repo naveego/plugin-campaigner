@@ -11,7 +11,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
     {
         private class SourcesResponse
         {
-            public List<Dictionary<string, object>> Sources { get; set; }
+            public List<Dictionary<string, object>>? Sources { get; set; }
         }
 
         private class SourcesEndpoint : Endpoint
@@ -25,7 +25,11 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                 var recordsList =
                     JsonConvert.DeserializeObject<SourcesResponse>(await response.Content.ReadAsStringAsync());
 
-
+                if (recordsList.Sources == null)
+                {
+                    yield break;
+                }
+                
                 foreach (var recordMap in recordsList.Sources)
                 {
                     var normalizedRecordMap = new Dictionary<string, object?>();

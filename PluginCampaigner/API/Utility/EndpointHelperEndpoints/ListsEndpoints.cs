@@ -16,7 +16,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
     {
         private class ListsResponse
         {
-            public List<Dictionary<string, object>> Lists { get; set; }
+            public List<Dictionary<string, object>>? Lists { get; set; }
         }
 
         private class ListsEndpoint : Endpoint
@@ -31,6 +31,11 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     JsonConvert.DeserializeObject<ListsResponse>(await response.Content.ReadAsStringAsync());
 
 
+                if (recordsList.Lists == null)
+                {
+                    yield break;
+                }
+                
                 foreach (var recordMap in recordsList.Lists)
                 {
                     var normalizedRecordMap = new Dictionary<string, object?>();
@@ -82,8 +87,9 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
 
         private class AddNewListsEndpoint : Endpoint
         {
-            private static ConcurrentDictionary<string, long> NameToListIdDictionary = new ConcurrentDictionary<string, long>();
-            
+            private static ConcurrentDictionary<string, long> NameToListIdDictionary =
+                new ConcurrentDictionary<string, long>();
+
             protected override string WritePathPropertyId { get; set; } = "";
 
             protected override List<string> RequiredWritePropertyIds { get; set; } = new List<string>
@@ -96,7 +102,8 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
 
             public override Task<Schema> GetStaticSchemaAsync(IApiClient apiClient, Schema schema)
             {
-                schema.Description = @"Creates a new list if the provided name does not yet exist and adds emails to the named list.";
+                schema.Description =
+                    @"Creates a new list if the provided name does not yet exist and adds emails to the named list.";
 
                 var properties = new List<Property>
                 {
@@ -183,7 +190,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                 {
                     await PreLoadLookup(apiClient);
                 }
-                
+
                 // attempt to add email
                 var errorString = await AddEmailToList(apiClient, schema, recordMap);
 
@@ -231,11 +238,12 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
 
                 foreach (var list in recordsList.Lists)
                 {
-                    NameToListIdDictionary.TryAdd(list["Name"].ToString() ?? "UNKNOWN_LIST", (long)list["ListID"]);
+                    NameToListIdDictionary.TryAdd(list["Name"].ToString() ?? "UNKNOWN_LIST", (long) list["ListID"]);
                 }
             }
 
-            private async Task<string> AddEmailToList(IApiClient apiClient, Schema schema, Dictionary<string, object> recordMap)
+            private async Task<string> AddEmailToList(IApiClient apiClient, Schema schema,
+                Dictionary<string, object> recordMap)
             {
                 if (NameToListIdDictionary.TryGetValue((string) recordMap["Name"], out var listId))
                 {
@@ -243,9 +251,9 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
 
                     var emailList = new List<string>
                     {
-                        (string)recordMap["Email"]
+                        (string) recordMap["Email"]
                     };
-                    
+
                     postObject.Add("EmailAddresses", emailList);
 
                     var json = new StringContent(
@@ -298,21 +306,21 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
 
                 var response =
                     await apiClient.PostAsync($"{BasePath.TrimEnd('/')}", json);
-                
+
                 if (!response.IsSuccessStatusCode)
                 {
                     return await response.Content.ReadAsStringAsync();
                 }
-                
+
                 var newList =
                     JsonConvert.DeserializeObject<Dictionary<string, object>>(
                         await response.Content.ReadAsStringAsync());
 
-                if(!NameToListIdDictionary.TryAdd((string)newList["Name"], (long)newList["ListID"]))
+                if (!NameToListIdDictionary.TryAdd((string) newList["Name"], (long) newList["ListID"]))
                 {
                     return "Could not add new list to lookup.";
                 }
-                
+
                 return "";
             }
         }

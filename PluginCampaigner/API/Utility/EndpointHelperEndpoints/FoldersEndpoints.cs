@@ -11,7 +11,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
     {
         private class FoldersResponse
         {
-            public List<Dictionary<string, object>> Folders { get; set; }
+            public List<Dictionary<string, object>>? Folders { get; set; }
         }
 
         private class FoldersEndpoint : Endpoint
@@ -26,6 +26,11 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     JsonConvert.DeserializeObject<FoldersResponse>(await response.Content.ReadAsStringAsync());
 
 
+                if (recordsList.Folders == null)
+                {
+                    yield break;
+                }
+                
                 foreach (var recordMap in recordsList.Folders)
                 {
                     var normalizedRecordMap = new Dictionary<string, object?>();
@@ -77,23 +82,25 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
 
         public static readonly Dictionary<string, Endpoint> FoldersEndpoints = new Dictionary<string, Endpoint>
         {
-            {"AllFolders", new FoldersEndpoint
             {
-                Id = "AllFolders",
-                Name = "All Folders",
-                BasePath = "/Creatives/Folders",
-                AllPath = "/",
-                DetailPath = "/",
-                DetailPropertyId = "FolderID",
-                SupportedActions = new List<EndpointActions>
+                "AllFolders", new FoldersEndpoint
                 {
-                    EndpointActions.Get
-                },
-                PropertyKeys = new List<string>
-                {
-                    "FolderID"
+                    Id = "AllFolders",
+                    Name = "All Folders",
+                    BasePath = "/Creatives/Folders",
+                    AllPath = "/",
+                    DetailPath = "/",
+                    DetailPropertyId = "FolderID",
+                    SupportedActions = new List<EndpointActions>
+                    {
+                        EndpointActions.Get
+                    },
+                    PropertyKeys = new List<string>
+                    {
+                        "FolderID"
+                    }
                 }
-            }},
+            },
         };
     }
 }

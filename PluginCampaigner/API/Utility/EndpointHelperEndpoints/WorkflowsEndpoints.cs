@@ -11,7 +11,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
     {
         private class WorkflowsResponse
         {
-            public List<Dictionary<string, object>> Workflows { get; set; }
+            public List<Dictionary<string, object>>? Workflows { get; set; }
         }
 
         private class WorkflowsEndpoint : Endpoint
@@ -25,6 +25,10 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                 var recordsList =
                     JsonConvert.DeserializeObject<WorkflowsResponse>(await response.Content.ReadAsStringAsync());
 
+                if (recordsList.Workflows == null)
+                {
+                    yield break;
+                }
 
                 foreach (var recordMap in recordsList.Workflows)
                 {
