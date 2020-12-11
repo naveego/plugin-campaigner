@@ -22,20 +22,20 @@ namespace PluginCampaigner.API.Utility
 
         static EndpointHelper()
         {
-            BouncesEndpointHelper.BouncesEndpoints.ToList().ForEach(x => Endpoints.Add(x.Key, x.Value));
-            CampaignEndpointHelper.CampaignEndpoints.ToList().ForEach(x => Endpoints.Add(x.Key, x.Value));
-            CreativesEndpointHelper.CreativesEndpoints.ToList().ForEach(x => Endpoints.Add(x.Key, x.Value));
-            FiltersEndpointHelper.FiltersEndpoints.ToList().ForEach(x => Endpoints.Add(x.Key, x.Value));
-            FoldersEndpointHelper.FoldersEndpoints.ToList().ForEach(x => Endpoints.Add(x.Key, x.Value));
-            ListsEndpointHelper.ListsEndpoints.ToList().ForEach(x => Endpoints.Add(x.Key, x.Value));
-            OrdersEndpointHelper.OrdersEndpoints.ToList().ForEach(x => Endpoints.Add(x.Key, x.Value));
-            ProductsEndpointHelper.ProductsEndpoints.ToList().ForEach(x => Endpoints.Add(x.Key, x.Value));
-            PublicationsEndpointHelper.PublicationsEndpoints.ToList().ForEach(x => Endpoints.Add(x.Key, x.Value));
-            SourcesEndpointHelper.SourcesEndpoints.ToList().ForEach(x => Endpoints.Add(x.Key, x.Value));
-            SubscriberEndpointHelper.SubscriberEndpoints.ToList().ForEach(x => Endpoints.Add(x.Key, x.Value));
+            BouncesEndpointHelper.BouncesEndpoints.ToList().ForEach(x => Endpoints.TryAdd(x.Key, x.Value));
+            CampaignEndpointHelper.CampaignEndpoints.ToList().ForEach(x => Endpoints.TryAdd(x.Key, x.Value));
+            CreativesEndpointHelper.CreativesEndpoints.ToList().ForEach(x => Endpoints.TryAdd(x.Key, x.Value));
+            FiltersEndpointHelper.FiltersEndpoints.ToList().ForEach(x => Endpoints.TryAdd(x.Key, x.Value));
+            FoldersEndpointHelper.FoldersEndpoints.ToList().ForEach(x => Endpoints.TryAdd(x.Key, x.Value));
+            ListsEndpointHelper.ListsEndpoints.ToList().ForEach(x => Endpoints.TryAdd(x.Key, x.Value));
+            OrdersEndpointHelper.OrdersEndpoints.ToList().ForEach(x => Endpoints.TryAdd(x.Key, x.Value));
+            ProductsEndpointHelper.ProductsEndpoints.ToList().ForEach(x => Endpoints.TryAdd(x.Key, x.Value));
+            PublicationsEndpointHelper.PublicationsEndpoints.ToList().ForEach(x => Endpoints.TryAdd(x.Key, x.Value));
+            SourcesEndpointHelper.SourcesEndpoints.ToList().ForEach(x => Endpoints.TryAdd(x.Key, x.Value));
+            SubscriberEndpointHelper.SubscriberEndpoints.ToList().ForEach(x => Endpoints.TryAdd(x.Key, x.Value));
             SuppressionListsEndpointHelper.SuppressionListsEndpoints.ToList()
-                .ForEach(x => Endpoints.Add(x.Key, x.Value));
-            WorkflowsEndpointHelper.WorkflowsEndpoints.ToList().ForEach(x => Endpoints.Add(x.Key, x.Value));
+                .ForEach(x => Endpoints.TryAdd(x.Key, x.Value));
+            WorkflowsEndpointHelper.WorkflowsEndpoints.ToList().ForEach(x => Endpoints.TryAdd(x.Key, x.Value));
         }
 
         public static Dictionary<string, Endpoint> GetAllEndpoints()
@@ -240,7 +240,7 @@ namespace PluginCampaigner.API.Utility
                     value = recordMap[property.Id];
                 }
 
-                postObject.Add(property.Id, value);
+                postObject.TryAdd(property.Id, value);
             }
 
             var json = new StringContent(
