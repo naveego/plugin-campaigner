@@ -60,12 +60,12 @@ namespace PluginCampaigner.API.Factory
                 Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
                 var response = await Client.GetAsync(uri);
-                if (!response.IsSuccessStatusCode)
-                {
-                    var apiError =
-                        JsonConvert.DeserializeObject<ApiError>(await response.Content.ReadAsStringAsync());
-                    throw new Exception(apiError.Error);
-                }
+                // if (!response.IsSuccessStatusCode)
+                // {
+                //     var apiError =
+                //         JsonConvert.DeserializeObject<ApiError>(await response.Content.ReadAsStringAsync());
+                //     throw new Exception(apiError.Error);
+                // }
 
                 return response;
             }
@@ -88,12 +88,12 @@ namespace PluginCampaigner.API.Factory
                 Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
                 var response = await Client.PostAsync(uri, json);
-                if (!response.IsSuccessStatusCode)
-                {
-                    var apiError =
-                        JsonConvert.DeserializeObject<ApiError>(await response.Content.ReadAsStringAsync());
-                    throw new Exception(apiError.Error);
-                }
+                // if (!response.IsSuccessStatusCode)
+                // {
+                //     var apiError =
+                //         JsonConvert.DeserializeObject<ApiError>(await response.Content.ReadAsStringAsync());
+                //     throw new Exception(apiError.Error);
+                // }
 
                 return response;
             }
@@ -116,12 +116,12 @@ namespace PluginCampaigner.API.Factory
                 Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
                 var response = await Client.PutAsync(uri, json);
-                if (!response.IsSuccessStatusCode)
-                {
-                    var apiError =
-                        JsonConvert.DeserializeObject<ApiError>(await response.Content.ReadAsStringAsync());
-                    throw new Exception(apiError.Error);
-                }
+                // if (!response.IsSuccessStatusCode)
+                // {
+                //     var apiError =
+                //         JsonConvert.DeserializeObject<ApiError>(await response.Content.ReadAsStringAsync());
+                //     throw new Exception(apiError.Error);
+                // }
 
                 return response;
             }
@@ -144,12 +144,12 @@ namespace PluginCampaigner.API.Factory
                 Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
                 var response = await Client.PatchAsync(uri, json);
-                if (!response.IsSuccessStatusCode)
-                {
-                    var apiError =
-                        JsonConvert.DeserializeObject<ApiError>(await response.Content.ReadAsStringAsync());
-                    throw new Exception(apiError.Error);
-                }
+                // if (!response.IsSuccessStatusCode)
+                // {
+                //     var apiError =
+                //         JsonConvert.DeserializeObject<ApiError>(await response.Content.ReadAsStringAsync());
+                //     throw new Exception(apiError.Error);
+                // }
 
                 return response;
             }
@@ -172,12 +172,12 @@ namespace PluginCampaigner.API.Factory
                 Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
                 var response = await Client.DeleteAsync(uri);
-                if (!response.IsSuccessStatusCode)
-                {
-                    var apiError =
-                        JsonConvert.DeserializeObject<ApiError>(await response.Content.ReadAsStringAsync());
-                    throw new Exception(apiError.Error);
-                }
+                // if (!response.IsSuccessStatusCode)
+                // {
+                //     var apiError =
+                //         JsonConvert.DeserializeObject<ApiError>(await response.Content.ReadAsStringAsync());
+                //     throw new Exception(apiError.Error);
+                // }
 
                 return response;
             }
