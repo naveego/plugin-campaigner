@@ -109,80 +109,82 @@ namespace PluginCampaigner.API.Utility
 
                 maxPageNumber = recordsList.TotalPages;
 
-                if (recordsList.Items != null)
+                if (recordsList.Items == null)
                 {
-                    foreach (var recordMap in recordsList.Items)
+                    yield break;
+                }
+
+                foreach (var recordMap in recordsList.Items)
+                {
+                    var normalizedRecordMap = new Dictionary<string, object?>();
+
+                    foreach (var kv in recordMap)
                     {
-                        var normalizedRecordMap = new Dictionary<string, object?>();
-
-                        foreach (var kv in recordMap)
+                        if (
+                            !string.IsNullOrWhiteSpace(DetailPath) &&
+                            !string.IsNullOrWhiteSpace(DetailPropertyId) &&
+                            kv.Key.Equals(DetailPropertyId) && kv.Value != null)
                         {
-                            if (
-                                !string.IsNullOrWhiteSpace(DetailPath) &&
-                                !string.IsNullOrWhiteSpace(DetailPropertyId) &&
-                                kv.Key.Equals(DetailPropertyId) && kv.Value != null)
+                            var detailResponse =
+                                await apiClient.GetAsync(
+                                    $"{BasePath.TrimEnd('/')}/{DetailPath.TrimStart('/')}/{kv.Value}");
+
+                            var detailsRecord =
+                                JsonConvert.DeserializeObject<Dictionary<string, object>>(
+                                    await detailResponse.Content.ReadAsStringAsync());
+
+                            foreach (var detailKv in detailsRecord)
                             {
-                                var detailResponse =
-                                    await apiClient.GetAsync(
-                                        $"{BasePath.TrimEnd('/')}/{DetailPath.TrimStart('/')}/{kv.Value}");
-
-                                var detailsRecord =
-                                    JsonConvert.DeserializeObject<Dictionary<string, object>>(
-                                        await detailResponse.Content.ReadAsStringAsync());
-
-                                foreach (var detailKv in detailsRecord)
+                                if (detailKv.Key.Equals(EndpointHelper.CustomFieldsId) && detailKv.Value != null)
                                 {
-                                    if (detailKv.Key.Equals(EndpointHelper.CustomFieldsId) && detailKv.Value != null)
+                                    var customFields =
+                                        JsonConvert.DeserializeObject<List<CustomField>>(
+                                            JsonConvert.SerializeObject(detailKv.Value));
+                                    foreach (var cf in customFields)
                                     {
-                                        var customFields =
-                                            JsonConvert.DeserializeObject<List<CustomField>>(
-                                                JsonConvert.SerializeObject(detailKv.Value));
-                                        foreach (var cf in customFields)
-                                        {
-                                            normalizedRecordMap.TryAdd(cf.FieldName, cf.Value);
-                                        }
-
-                                        continue;
+                                        normalizedRecordMap.TryAdd(cf.FieldName, cf.Value);
                                     }
 
-                                    if (detailKv.Key.Equals(EndpointHelper.LinksPropertyId))
-                                    {
-                                        continue;
-                                    }
-
-                                    normalizedRecordMap.TryAdd(detailKv.Key, detailKv.Value);
+                                    continue;
                                 }
 
-                                continue;
-                            }
-
-                            if (kv.Key.Equals(EndpointHelper.CustomFieldsId) && kv.Value != null)
-                            {
-                                var customFields =
-                                    JsonConvert.DeserializeObject<List<CustomField>>(
-                                        JsonConvert.SerializeObject(kv.Value));
-                                foreach (var cf in customFields)
+                                if (detailKv.Key.Equals(EndpointHelper.LinksPropertyId))
                                 {
-                                    normalizedRecordMap.TryAdd(cf.FieldName, cf.Value);
+                                    continue;
                                 }
 
-                                continue;
+                                normalizedRecordMap.TryAdd(detailKv.Key, detailKv.Value);
                             }
 
-                            if (kv.Key.Equals(EndpointHelper.LinksPropertyId))
-                            {
-                                continue;
-                            }
-
-                            normalizedRecordMap.TryAdd(kv.Key, kv.Value);
+                            continue;
                         }
 
-                        yield return new Record
+                        if (kv.Key.Equals(EndpointHelper.CustomFieldsId) && kv.Value != null)
                         {
-                            Action = Record.Types.Action.Upsert,
-                            DataJson = JsonConvert.SerializeObject(normalizedRecordMap)
-                        };
+                            var customFields =
+                                JsonConvert.DeserializeObject<List<CustomField>>(
+                                    JsonConvert.SerializeObject(kv.Value));
+                            foreach (var cf in customFields)
+                            {
+                                normalizedRecordMap.TryAdd(cf.FieldName, cf.Value);
+                            }
+
+                            continue;
+                        }
+
+                        if (kv.Key.Equals(EndpointHelper.LinksPropertyId))
+                        {
+                            continue;
+                        }
+
+                        normalizedRecordMap.TryAdd(kv.Key, kv.Value);
                     }
+
+                    yield return new Record
+                    {
+                        Action = Record.Types.Action.Upsert,
+                        DataJson = JsonConvert.SerializeObject(normalizedRecordMap)
+                    };
                 }
 
                 pageNumber++;
