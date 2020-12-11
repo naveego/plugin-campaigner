@@ -12,14 +12,18 @@ namespace PluginCampaigner.API.Factory
     public class ApiClient: IApiClient
     {
         private IApiAuthenticator Authenticator { get; set; }
-        private HttpClient Client { get; set; }
+        private static HttpClient Client { get; set; }
         private Settings Settings { get; set; }
+
+        private readonly string _tokenHeaderName = "ApiKey";
 
         public ApiClient(HttpClient client, Settings settings)
         {
             Authenticator = new ApiAuthenticator(client, settings);
             Client = client;
             Settings = settings;
+            
+            Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
         
         public async Task TestConnection()
@@ -27,18 +31,19 @@ namespace PluginCampaigner.API.Factory
             try
             {
                 var token = await Authenticator.GetToken();
-                var uri = $"{Constants.BaseApiUrl.TrimEnd('/')}/{Utility.Constants.TestConnectionPath}";
+                var uri = new Uri($"{Constants.BaseApiUrl.TrimEnd('/')}/{Utility.Constants.TestConnectionPath}");
                 
-                Client.DefaultRequestHeaders.Clear();
-                Client.DefaultRequestHeaders.Add("ApiKey", token);
-                Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                    RequestUri = uri,
+                };
+                request.Headers.Add(_tokenHeaderName, token);
 
-                var response = await Client.GetAsync(uri);
+                var response = await Client.SendAsync(request);
                 if (!response.IsSuccessStatusCode)
                 {
-                    var apiError =
-                        JsonConvert.DeserializeObject<ApiError>(await response.Content.ReadAsStringAsync());
-                    throw new Exception(apiError.Error);
+                    throw new Exception(await response.Content.ReadAsStringAsync());
                 }
             }
             catch (Exception e)
@@ -53,21 +58,16 @@ namespace PluginCampaigner.API.Factory
             try
             {
                 var token = await Authenticator.GetToken();
-                var uri = $"{Constants.BaseApiUrl.TrimEnd('/')}/{path.TrimStart('/')}";
+                var uri = new Uri($"{Constants.BaseApiUrl.TrimEnd('/')}/{Utility.Constants.TestConnectionPath}");
                 
-                Client.DefaultRequestHeaders.Clear();
-                Client.DefaultRequestHeaders.Add("ApiKey", token);
-                Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                    RequestUri = uri,
+                };
+                request.Headers.Add(_tokenHeaderName, token);
 
-                var response = await Client.GetAsync(uri);
-                // if (!response.IsSuccessStatusCode)
-                // {
-                //     var apiError =
-                //         JsonConvert.DeserializeObject<ApiError>(await response.Content.ReadAsStringAsync());
-                //     throw new Exception(apiError.Error);
-                // }
-
-                return response;
+                return await Client.SendAsync(request);
             }
             catch (Exception e)
             {
@@ -83,19 +83,15 @@ namespace PluginCampaigner.API.Factory
                 var token = await Authenticator.GetToken();
                 var uri = new Uri($"{Constants.BaseApiUrl.TrimEnd('/')}/{path.TrimStart('/')}");
                 
-                Client.DefaultRequestHeaders.Clear();
-                Client.DefaultRequestHeaders.Add("ApiKey", token);
-                Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post,
+                    RequestUri = uri,
+                    Content = json
+                };
+                request.Headers.Add(_tokenHeaderName, token);
 
-                var response = await Client.PostAsync(uri, json);
-                // if (!response.IsSuccessStatusCode)
-                // {
-                //     var apiError =
-                //         JsonConvert.DeserializeObject<ApiError>(await response.Content.ReadAsStringAsync());
-                //     throw new Exception(apiError.Error);
-                // }
-
-                return response;
+                return await Client.SendAsync(request);
             }
             catch (Exception e)
             {
@@ -111,19 +107,15 @@ namespace PluginCampaigner.API.Factory
                 var token = await Authenticator.GetToken();
                 var uri = new Uri($"{Constants.BaseApiUrl.TrimEnd('/')}/{path.TrimStart('/')}");
                 
-                Client.DefaultRequestHeaders.Clear();
-                Client.DefaultRequestHeaders.Add("ApiKey", token);
-                Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put,
+                    RequestUri = uri,
+                    Content = json
+                };
+                request.Headers.Add(_tokenHeaderName, token);
 
-                var response = await Client.PutAsync(uri, json);
-                // if (!response.IsSuccessStatusCode)
-                // {
-                //     var apiError =
-                //         JsonConvert.DeserializeObject<ApiError>(await response.Content.ReadAsStringAsync());
-                //     throw new Exception(apiError.Error);
-                // }
-
-                return response;
+                return await Client.SendAsync(request);
             }
             catch (Exception e)
             {
@@ -139,19 +131,15 @@ namespace PluginCampaigner.API.Factory
                 var token = await Authenticator.GetToken();
                 var uri = new Uri($"{Constants.BaseApiUrl.TrimEnd('/')}/{path.TrimStart('/')}");
                 
-                Client.DefaultRequestHeaders.Clear();
-                Client.DefaultRequestHeaders.Add("ApiKey", token);
-                Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Patch,
+                    RequestUri = uri,
+                    Content = json
+                };
+                request.Headers.Add(_tokenHeaderName, token);
 
-                var response = await Client.PatchAsync(uri, json);
-                // if (!response.IsSuccessStatusCode)
-                // {
-                //     var apiError =
-                //         JsonConvert.DeserializeObject<ApiError>(await response.Content.ReadAsStringAsync());
-                //     throw new Exception(apiError.Error);
-                // }
-
-                return response;
+                return await Client.SendAsync(request);
             }
             catch (Exception e)
             {
@@ -165,21 +153,16 @@ namespace PluginCampaigner.API.Factory
             try
             {
                 var token = await Authenticator.GetToken();
-                var uri = $"{Constants.BaseApiUrl.TrimEnd('/')}/{path.TrimStart('/')}";
+                var uri = new Uri($"{Constants.BaseApiUrl.TrimEnd('/')}/{path.TrimStart('/')}");
                 
-                Client.DefaultRequestHeaders.Clear();
-                Client.DefaultRequestHeaders.Add("ApiKey", token);
-                Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Delete,
+                    RequestUri = uri
+                };
+                request.Headers.Add(_tokenHeaderName, token);
 
-                var response = await Client.DeleteAsync(uri);
-                // if (!response.IsSuccessStatusCode)
-                // {
-                //     var apiError =
-                //         JsonConvert.DeserializeObject<ApiError>(await response.Content.ReadAsStringAsync());
-                //     throw new Exception(apiError.Error);
-                // }
-
-                return response;
+                return await Client.SendAsync(request);
             }
             catch (Exception e)
             {
