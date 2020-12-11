@@ -58,7 +58,7 @@ namespace PluginCampaigner.API.Factory
             try
             {
                 var token = await Authenticator.GetToken();
-                var uri = new Uri($"{Constants.BaseApiUrl.TrimEnd('/')}/{Utility.Constants.TestConnectionPath}");
+                var uri = new Uri($"{Constants.BaseApiUrl.TrimEnd('/')}/{path.TrimStart('/')}");
                 
                 var request = new HttpRequestMessage
                 {

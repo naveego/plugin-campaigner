@@ -212,7 +212,7 @@ namespace PluginCampaignerTest.Plugin
                 SampleSize = 10,
                 ToRefresh =
                 {
-                    GetTestSchema()
+                    GetTestSchema("ActiveSubscribers")
                 }
             };
 
