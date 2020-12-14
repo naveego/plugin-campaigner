@@ -61,6 +61,45 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
 
                         foreach (var kv in recordMap)
                         {
+                            if (
+                                !string.IsNullOrWhiteSpace(DetailPath) &&
+                                !string.IsNullOrWhiteSpace(DetailPropertyId) &&
+                                kv.Key.Equals(DetailPropertyId) && kv.Value != null)
+                            {
+                                var detailResponse =
+                                    await apiClient.GetAsync(
+                                        $"{BasePath.TrimEnd('/')}/{kv.Value}/{DetailPath.TrimStart('/')}");
+
+                                var detailsRecord =
+                                    JsonConvert.DeserializeObject<Dictionary<string, object>>(
+                                        await detailResponse.Content.ReadAsStringAsync());
+
+                                foreach (var detailKv in detailsRecord)
+                                {
+                                    if (detailKv.Key.Equals(EndpointHelper.CustomFieldsId) && detailKv.Value != null)
+                                    {
+                                        var customFields =
+                                            JsonConvert.DeserializeObject<List<CustomField>>(
+                                                JsonConvert.SerializeObject(detailKv.Value));
+                                        foreach (var cf in customFields)
+                                        {
+                                            normalizedRecordMap.TryAdd(cf.FieldName, cf.Value);
+                                        }
+
+                                        continue;
+                                    }
+
+                                    if (detailKv.Key.Equals(EndpointHelper.LinksPropertyId))
+                                    {
+                                        continue;
+                                    }
+
+                                    normalizedRecordMap.TryAdd(detailKv.Key, detailKv.Value);
+                                }
+
+                                continue;
+                            }
+                            
                             if (kv.Key.Equals(EndpointHelper.CustomFieldsId) && kv.Value != null)
                             {
                                 var customFields =
@@ -234,8 +273,8 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     Name = "Active Subscribers",
                     BasePath = "/Subscribers",
                     AllPath = "/",
-                    DetailPath = null,
-                    DetailPropertyId = null,
+                    DetailPath = "/Properties",
+                    DetailPropertyId = "EmailAddress",
                     SupportedActions = new List<EndpointActions>
                     {
                         EndpointActions.Get
@@ -272,7 +311,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     Name = "Upsert Subscribers",
                     BasePath = "/Subscribers",
                     AllPath = "/",
-                    DetailPath = null,
+                    DetailPath = "/Properties",
                     DetailPropertyId = "EmailAddress",
                     SupportedActions = new List<EndpointActions>
                     {
