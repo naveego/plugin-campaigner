@@ -43,7 +43,7 @@ namespace PluginCampaigner.API.Discover
             {
                 return schema;
             }
-            
+
             // add sample and count
             var records = Read.Read.ReadRecordsAsync(apiClient, schema).Take(sampleSize);
             schema.Sample.AddRange(await records.ToListAsync());
@@ -63,14 +63,14 @@ namespace PluginCampaigner.API.Discover
             {
                 return await endpoint.GetStaticSchemaAsync(apiClient, schema);
             }
-            
-            var recordsListRaw = await endpoint.ReadRecordsAsync(apiClient).Take(100).ToListAsync();
+
+            var recordsListRaw = await endpoint.ReadRecordsAsync(apiClient, null, null, true).Take(100).ToListAsync();
             var recordsList = recordsListRaw
                 .Select(r => JsonConvert.DeserializeObject<Dictionary<string, object>>(r.DataJson))
                 .ToList();
 
             var types = GetPropertyTypesFromRecords(recordsList);
-            
+
             var record = recordsList.FirstOrDefault();
 
             var properties = new List<Property>();
@@ -87,7 +87,9 @@ namespace PluginCampaigner.API.Discover
                         IsKey = endpoint.PropertyKeys.Contains(recordKey),
                         IsCreateCounter = false,
                         IsUpdateCounter = false,
-                        TypeAtSource = await endpoint.IsCustomProperty(apiClient, recordKey) ? Constants.CustomProperty : "",
+                        TypeAtSource = await endpoint.IsCustomProperty(apiClient, recordKey)
+                            ? Constants.CustomProperty
+                            : "",
                         IsNullable = true
                     };
 

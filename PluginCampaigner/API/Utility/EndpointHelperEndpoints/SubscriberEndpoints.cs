@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Grpc.Core;
 using Naveego.Sdk.Plugins;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using PluginCampaigner.API.Factory;
 using PluginCampaigner.DataContracts;
 using PluginCampaigner.Helper;
@@ -29,7 +30,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
 
 
             public override async IAsyncEnumerable<Record> ReadRecordsAsync(IApiClient apiClient,
-                DateTime? lastReadTime = null, TaskCompletionSource<DateTime>? tcs = null)
+                DateTime? lastReadTime = null, TaskCompletionSource<DateTime>? tcs = null, bool isDiscoverRead = false)
             {
                 long pageNumber = 1;
                 long maxPageNumber;
@@ -91,6 +92,18 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
 
                                     if (detailKv.Key.Equals(EndpointHelper.LinksPropertyId))
                                     {
+                                        continue;
+                                    }
+                                    
+                                    if (detailKv.Value is JToken && !isDiscoverRead)
+                                    {
+                                        var jTokenJson = JsonConvert.SerializeObject(detailKv.Value);
+                                        if (jTokenJson == "[]")
+                                        {
+                                            normalizedRecordMap.TryAdd(detailKv.Key, null);
+                                        }
+                                        
+                                        normalizedRecordMap.TryAdd(detailKv.Key, jTokenJson);
                                         continue;
                                     }
 
@@ -199,6 +212,14 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                         if (recordMap.ContainsKey(property.Id))
                         {
                             value = recordMap[property.Id];
+                            
+                            if (property.Type == PropertyType.Json)
+                            {
+                                if (value is string s)
+                                {
+                                    value = JsonConvert.DeserializeObject(s) ?? null;
+                                }
+                            }
                         }
 
                         putObject.Add(property.Id, value);
@@ -207,6 +228,31 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
 
                 putObject.Add("CustomFields", customFieldObject);
 
+                if (putObject.ContainsKey("Lists") && putObject["Lists"] != null)
+                {
+                    JArray j = (JArray) putObject["Lists"];
+                    putObject["Lists"] = j.Select(x => x["ListID"]).ToList();
+                }
+                
+                if (putObject.ContainsKey("Orders") && putObject["Orders"] != null)
+                {
+                    JArray j = (JArray) putObject["Orders"];
+                    putObject["Orders"] = j.Select(x => x["OrderNumber"]).ToList();
+                }
+                
+                if (putObject.ContainsKey("Publications") && putObject["Publications"] != null)
+                {
+                    JArray j = (JArray) putObject["Publications"];
+                    putObject["Publications"] = j.Select(x => x["PublicationID"]).ToList();
+                }
+                
+                if (putObject.ContainsKey("Source") && putObject["Source"] != null)
+                {
+                    JObject j = (JObject) putObject["Source"];
+                    putObject["SourceID"] = j["SourceID"];
+                    putObject.Remove("Source");
+                }
+                
                 var json = new StringContent(
                     JsonConvert.SerializeObject(putObject),
                     Encoding.UTF8,

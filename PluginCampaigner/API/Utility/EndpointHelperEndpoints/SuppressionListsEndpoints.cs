@@ -17,7 +17,7 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
         private class SuppressionListsEndpoint : Endpoint
         {
             public override async IAsyncEnumerable<Record> ReadRecordsAsync(IApiClient apiClient,
-                DateTime? lastReadTime = null, TaskCompletionSource<DateTime>? tcs = null)
+                DateTime? lastReadTime = null, TaskCompletionSource<DateTime>? tcs = null, bool isDiscoverRead = false)
             {
                 var response = await apiClient.GetAsync(
                     $"{BasePath.TrimEnd('/')}/{AllPath.TrimStart('/')}");

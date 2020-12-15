@@ -512,7 +512,7 @@ namespace PluginCampaignerTest.Plugin
             var channel = new Channel($"localhost:{port}", ChannelCredentials.Insecure);
             var client = new Publisher.PublisherClient(channel);
 
-            var schema = GetTestSchema("UpsertCampaigns");
+            var schema = GetTestSchema("UpsertSubscribers");
 
             var connectRequest = GetConnectSettings();
 
@@ -530,7 +530,7 @@ namespace PluginCampaignerTest.Plugin
                         Action = Record.Types.Action.Upsert,
                         CorrelationId = "test",
                         RecordId = "record1",
-                        DataJson = "{\"CampaignID\":201,\"Name\":\"Unit Test Name\",\"CreativeID\":0,\"Subject\":\"Unit Test Subject\",\"FromName\":\"Unit Test From Name\"}",
+                        DataJson = "{\"Account PKey\":\"\",\"Fax\":\"\",\"FirstName\":\"Casey\",\"LastName\":\"Brady\",\"Owner Email\":\"casey.brady@naveego.com\",\"Owner First Name\":\"\",\"Owner Last Name\":\"\",\"Phone\":\"\",\"IPAddress\":\"107.77.173.63\",\"EmailID\":33662381927,\"EmailAddress\":\"casey.brady@naveego.com\",\"Created\":\"2020-10-30T13:16:11.74Z\",\"Status\":\"Active\",\"DateStamp\":\"2020-10-30\",\"Publications\":null,\"Lists\":\"[{\\\"ListID\\\":20927682,\\\"Name\\\":\\\"list1\\\",\\\"Links\\\":[]}]\",\"Source\":\"{\\\"SourceID\\\":1,\\\"Name\\\":\\\"Default Source\\\",\\\"Links\\\":[]}\"}",
                     }
                 }
             };

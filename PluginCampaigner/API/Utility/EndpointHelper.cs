@@ -90,7 +90,7 @@ namespace PluginCampaigner.API.Utility
         }
 
         public virtual async IAsyncEnumerable<Record> ReadRecordsAsync(IApiClient apiClient,
-            DateTime? lastReadTime = null, TaskCompletionSource<DateTime>? tcs = null)
+            DateTime? lastReadTime = null, TaskCompletionSource<DateTime>? tcs = null, bool isDiscoverRead = false)
         {
             long pageNumber = 1;
             long maxPageNumber;
