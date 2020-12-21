@@ -40,7 +40,12 @@ namespace PluginCampaigner.API.Write
                 await WriteSemaphoreSlim.WaitAsync();
 
                 // write records
-                await endpoint.WriteRecordAsync(apiClient, schema, record, responseStream);
+                var errorMessage = await endpoint.WriteRecordAsync(apiClient, schema, record, responseStream);
+
+                if (!string.IsNullOrWhiteSpace(errorMessage))
+                {
+                    Logger.Error(new Exception(errorMessage), errorMessage);
+                }
                 
                 timer.Stop();
                 Logger.Debug($"Acknowledged Record {record.RecordId} time: {timer.ElapsedMilliseconds}");

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -249,7 +250,10 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                 if (putObject.ContainsKey("Source") && putObject["Source"] != null)
                 {
                     JObject j = (JObject) putObject["Source"];
-                    putObject["SourceID"] = j["SourceID"];
+                    if (j.ContainsKey("SourceID"))
+                    {
+                        putObject["SourceID"] = j["SourceID"];
+                    }
                     putObject.Remove("Source");
                 }
                 
@@ -261,6 +265,13 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
 
                 var response =
                     await apiClient.PutAsync($"{BasePath.TrimEnd('/')}/{recordMap[WritePathPropertyId]}", json);
+
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    response =
+                        await apiClient.PostAsync($"{BasePath.TrimEnd('/')}", json);
+                }
+
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorMessage = await response.Content.ReadAsStringAsync();

@@ -530,7 +530,7 @@ namespace PluginCampaignerTest.Plugin
                         Action = Record.Types.Action.Upsert,
                         CorrelationId = "test",
                         RecordId = "record1",
-                        DataJson = "{\"Account PKey\":\"\",\"Fax\":\"\",\"FirstName\":\"Casey\",\"LastName\":\"Brady\",\"Owner Email\":\"casey.brady@naveego.com\",\"Owner First Name\":\"\",\"Owner Last Name\":\"\",\"Phone\":\"\",\"IPAddress\":\"107.77.173.63\",\"EmailID\":33662381927,\"EmailAddress\":\"casey.brady@naveego.com\",\"Created\":\"2020-10-30T13:16:11.74Z\",\"Status\":\"Active\",\"DateStamp\":\"2020-10-30\",\"Publications\":null,\"Lists\":\"[{\\\"ListID\\\":20927682,\\\"Name\\\":\\\"list1\\\",\\\"Links\\\":[]}]\",\"Source\":\"{\\\"SourceID\\\":1,\\\"Name\\\":\\\"Default Source\\\",\\\"Links\\\":[]}\"}",
+                        DataJson = "{\"Account PKey\":\"\",\"ZZN9X\":\"\",\"FirstName\":\"Molly\",\"LastName\":\"Male\",\"Owner Email\":null,\"Owner First Name\":\"Jenna\",\"Owner Last Name\":\"Jenna\",\"Phone\":\"(263) 83-25052\",\"IPAddress\":null,\"EmailAddress\":\"otgqeeld5@ofrb.zsamvv.net\",\"Lists\":\"[]\"}",
                     }
                 }
             };
