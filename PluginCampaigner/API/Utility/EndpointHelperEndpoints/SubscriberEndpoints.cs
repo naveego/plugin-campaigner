@@ -185,6 +185,17 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                         return errorMessage;
                     }
                 }
+                
+                // get live object
+                Dictionary<string, object> liveRecord = new Dictionary<string, object>();
+                var getResponse = await apiClient.GetAsync(
+                    $"{BasePath.TrimEnd('/')}/{recordMap[DetailPropertyId]}/{DetailPath.TrimStart('/')}");
+
+                if (getResponse.IsSuccessStatusCode)
+                {
+                    liveRecord =
+                        JsonConvert.DeserializeObject<Dictionary<string, object>>(await getResponse.Content.ReadAsStringAsync());
+                }
 
                 var putObject = new Dictionary<string, object>();
                 var customFieldObject = new List<CustomField>();
@@ -234,22 +245,35 @@ namespace PluginCampaigner.API.Utility.EndpointHelperEndpoints
                     JArray j = (JArray) putObject["Lists"];
                     putObject["Lists"] = j.Select(x => x["ListID"]).ToList();
                 }
-                
-                if (putObject.ContainsKey("Orders") && putObject["Orders"] != null)
+                else
                 {
-                    JArray j = (JArray) putObject["Orders"];
-                    putObject["Orders"] = j.Select(x => x["OrderNumber"]).ToList();
+                    JArray j = (JArray) liveRecord["Lists"];
+                    putObject["Lists"] = j.Select(x => x["ListID"]).ToList();
                 }
-                
+
                 if (putObject.ContainsKey("Publications") && putObject["Publications"] != null)
                 {
                     JArray j = (JArray) putObject["Publications"];
+                    putObject["Publications"] = j.Select(x => x["PublicationID"]).ToList();
+                }
+                else
+                {
+                    JArray j = (JArray) liveRecord["Publications"];
                     putObject["Publications"] = j.Select(x => x["PublicationID"]).ToList();
                 }
                 
                 if (putObject.ContainsKey("Source") && putObject["Source"] != null)
                 {
                     JObject j = (JObject) putObject["Source"];
+                    if (j.ContainsKey("SourceID"))
+                    {
+                        putObject["SourceID"] = j["SourceID"];
+                    }
+                    putObject.Remove("Source");
+                }
+                else
+                {
+                    JObject j = (JObject) liveRecord["Source"];
                     if (j.ContainsKey("SourceID"))
                     {
                         putObject["SourceID"] = j["SourceID"];
